@@ -1,0 +1,55 @@
+# ── Secrets / local env ──
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Streamlit secrets (배포 시 Streamlit Cloud / 호스트 secrets 사용)
+.streamlit/secrets.toml
+
+# ── Python ──
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.ipynb_checkpoints/
+
+# ── OS / IDE ──
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
+
+# ── Uploads / temp ──
+assets/uploaded_proposal.pdf
+*.tmp
+tmp/
+temp/
+.cache/
+
+# ── Local source data (관리자 업로드용 · 저장소에 올리지 않음) ──
+# 닐슨·매출·기획안 원본은 Supabase 적재 후 로컬에만 보관
+*.xls
+*.xlsx
+*.xlsm
+*.pdf
+
+# 로컬에만 있는 참고/로고 원본 (루트)
+/*.png
+pro2.txt
