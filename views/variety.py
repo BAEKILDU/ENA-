@@ -1,9 +1,5 @@
 """예능 콘텐츠 가치+ 메인 대시보드."""
 
-import hashlib
-import random
-
-import pandas as pd
 import streamlit as st
 
 from data.hybrid_data import (
@@ -31,17 +27,7 @@ from utils.components import (
 def _competition_chart(slot: str):
     df = get_competition_data(slot)
     if df.empty or "is_ena" not in df.columns:
-        # 선택 시간대에 Mock이 없을 때 샘플 경쟁 데이터 표시
-        seed = int(hashlib.md5(slot.encode()).hexdigest()[:8], 16)
-        rng = random.Random(seed)
-        df = pd.DataFrame(
-            [
-                {"title": f"ENA ({slot})", "is_ena": True, "rating": round(rng.uniform(1.0, 2.2), 1)},
-                {"title": "동시간대 A", "is_ena": False, "rating": round(rng.uniform(1.5, 3.5), 1)},
-                {"title": "동시간대 B", "is_ena": False, "rating": round(rng.uniform(1.2, 3.0), 1)},
-                {"title": "동시간대 C", "is_ena": False, "rating": round(rng.uniform(0.8, 2.8), 1)},
-            ]
-        )
+        return None
     highlight = {i for i, ena in enumerate(df["is_ena"]) if ena}
     if "channel" in df.columns:
         labels = [f"{c} · {t}" for c, t in zip(df["channel"].tolist(), df["title"].tolist())]
@@ -117,6 +103,14 @@ def render() -> None:
     goal_df = get_goal_vs_actual_df()
     goal_summary = get_goal_summary()
 
+    if df.empty:
+        render_summary_box(
+            "표시할 ENA 예능 닐슨 데이터가 없습니다. "
+            "관리자 페이지에서 닐슨 파일을 업로드하거나 Supabase 연결을 확인하세요."
+            + (f" (최근 리포트일: {summary.get('report_date')})" if summary.get("report_date") else "")
+        )
+        return
+
     render_summary_box(
         f"ENA 예능 {len(df)}편 중 '{summary['top_title']}'이 "
         f"시청률·화제성 종합 1위. "
@@ -126,7 +120,7 @@ def render() -> None:
         f"누적 부가매출 {format_revenue_won(summary['total_revenue'])}. "
         f"목표 대비 종합 달성률 평균 {goal_summary['avg_achv']}% "
         f"({goal_summary['achieved_count']}/{goal_summary['total_count']}편 목표 달성). "
-        f"데이터: 닐슨 {summary.get('nielsen_count', 0)}편 + Mock {summary.get('mock_count', 0)}편"
+        f"데이터: 닐슨 실데이터 {summary.get('nielsen_count', 0)}편"
         + (f" · 기준일 {summary['report_date']}" if summary.get("report_date") else "")
         + "."
     )
@@ -235,16 +229,17 @@ def render() -> None:
                 f"{s['slot']} · 시청률 {s['rating']}% · 화제성 {s['buzz_index']} · 트렌드 {s['trend']}",
                 highlight="우수",
             )
-        st.plotly_chart(
-            bar_chart(
-                x=[s["title"] for s in top],
-                y=[s["rating"] for s in top],
-                title="",
-                y_title="시청률 (%)",
-                text_template="%{y}%",
-            ),
-            use_container_width=True,
-        )
+        if top:
+            st.plotly_chart(
+                bar_chart(
+                    x=[s["title"] for s in top],
+                    y=[s["rating"] for s in top],
+                    title="",
+                    y_title="시청률 (%)",
+                    text_template="%{y}%",
+                ),
+                use_container_width=True,
+            )
     with col2:
         render_section_title("하위 그룹")
         for i, s in enumerate(bottom, 1):
@@ -254,16 +249,17 @@ def render() -> None:
                 f"{s['slot']} · 시청률 {s['rating']}% · 화제성 {s['buzz_index']} · 트렌드 {s['trend']}",
                 highlight="재검토 필요",
             )
-        st.plotly_chart(
-            bar_chart(
-                x=[s["title"] for s in bottom],
-                y=[s["rating"] for s in bottom],
-                title="",
-                y_title="시청률 (%)",
-                text_template="%{y}%",
-            ),
-            use_container_width=True,
-        )
+        if bottom:
+            st.plotly_chart(
+                bar_chart(
+                    x=[s["title"] for s in bottom],
+                    y=[s["rating"] for s in bottom],
+                    title="",
+                    y_title="시청률 (%)",
+                    text_template="%{y}%",
+                ),
+                use_container_width=True,
+            )
 
     render_section_title("동시간대 경쟁 비교")
     _days = ["월", "화", "수", "목", "금", "토", "일"]
@@ -277,7 +273,11 @@ def render() -> None:
     with min_col:
         selected_minute = st.selectbox("분 선택 (5분 단위)", _minutes, key="comp_minute")
     slot = f"{selected_day} {selected_hour}:{selected_minute}"
-    st.plotly_chart(_competition_chart(slot), use_container_width=True)
+    comp_fig = _competition_chart(slot)
+    if comp_fig is None:
+        st.info(f"'{slot}' 시간대에 닐슨 경쟁 데이터가 없습니다.")
+    else:
+        st.plotly_chart(comp_fig, use_container_width=True)
 
     render_section_title("트렌드 분석")
     top_show = df.loc[df["rating"].idxmax()]
@@ -287,7 +287,7 @@ def render() -> None:
         "콘텐츠 선택",
         options=df["id"].tolist(),
         format_func=lambda x: next(
-            (f"{s['title']} [{s.get('data_source', 'mock')}]" for s in catalog if s["id"] == x),
+            (s["title"] for s in catalog if s["id"] == x),
             x,
         ),
         index=list(df["id"]).index(top_show["id"]),
@@ -298,7 +298,7 @@ def render() -> None:
     st.caption(
         f"시청률 1위: {top_show['title']} ({top_show['rating']}%) · "
         f"화제성 1위: {buzz_show['title']} ({buzz_show['buzz_index']}점) · "
-        f"닐슨 {summary.get('nielsen_count', 0)}편 + Mock {summary.get('mock_count', 0)}편"
+        f"닐슨 실데이터 {summary.get('nielsen_count', 0)}편"
     )
 
     if st.button("세부 데이터 보기 →", key="go_variety_detail", type="primary"):

@@ -1,4 +1,4 @@
-"""환경 변수 로드 (.env)."""
+"""환경 변수 로드 (.env / Streamlit secrets)."""
 
 from __future__ import annotations
 
@@ -11,16 +11,32 @@ _ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(_ENV_PATH)
 
 
+def _secret(name: str) -> str:
+    """Streamlit Cloud secrets 우선, 없으면 환경변수."""
+    try:
+        import streamlit as st
+
+        if hasattr(st, "secrets") and name in st.secrets:
+            return str(st.secrets[name]).strip()
+    except Exception:  # noqa: BLE001
+        pass
+    return (os.getenv(name) or "").strip()
+
+
 def get_openai_api_key() -> str:
-    return (os.getenv("OPENAI_API_KEY") or "").strip()
+    return _secret("OPENAI_API_KEY")
 
 
 def get_supabase_url() -> str:
-    return (os.getenv("SUPABASE_URL") or "").strip()
+    return _secret("SUPABASE_URL")
 
 
 def get_supabase_anon_key() -> str:
-    return (os.getenv("SUPABASE_ANON_KEY") or "").strip()
+    return _secret("SUPABASE_ANON_KEY")
+
+
+def get_supabase_service_role_key() -> str:
+    return _secret("SUPABASE_SERVICE_ROLE_KEY")
 
 
 def env_status() -> dict[str, bool]:

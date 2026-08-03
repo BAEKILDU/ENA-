@@ -6,7 +6,7 @@ from io import BytesIO
 
 from docx import Document
 
-from data.mock_data import get_revenue_ideas
+from data.analysis_engine import get_revenue_ideas
 
 
 def build_analysis_docx(result: dict) -> bytes:

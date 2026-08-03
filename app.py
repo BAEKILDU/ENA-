@@ -68,7 +68,7 @@ with st.sidebar:
         st.session_state["current_page"] = page_key
 
     st.divider()
-    st.caption("닐슨+Mock 하이브리드 · v0.7")
+    st.caption("닐슨 실데이터 · v0.8")
     st.caption("작성: 콘텐츠제작센터")
     st.markdown("")
     if st.button(

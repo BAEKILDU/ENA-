@@ -5,7 +5,7 @@ import re
 
 import streamlit as st
 
-from data.mock_data import get_revenue_ideas
+from data.analysis_engine import get_revenue_ideas
 from utils.charts import bar_chart, horizontal_bar_chart
 from utils.components import (
     navigate_to,

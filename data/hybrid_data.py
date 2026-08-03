@@ -1,7 +1,4 @@
-"""닐슨 실데이터 + Mock 하이브리드 카탈로그/경쟁 데이터.
-
-예능 분석·신규 기획은 이 모듈을 통해 실데이터와 가상 데이터를 함께 사용합니다.
-"""
+"""닐슨 실데이터 기반 카탈로그/경쟁 데이터 (Mock 없음)."""
 
 from __future__ import annotations
 
@@ -13,12 +10,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from data import mock_data as mock
+from data import analysis_engine as engine
 from data import nielsen as nd
 
 PREFERRED_TARGET = "개인2049"
 ENA_CHANNELS = {"ENA", "ENA PLAY", "ENA DRAMA", "ENA STORY"}
 VARIETY_SHEETS = ("ENA경쟁채널시청률", "ENA PLAY경쟁채널시청률")
+DEFAULT_SLOTS = ["월 22:00", "화 22:00", "수 22:00", "목 22:30", "금 23:00", "토 21:00", "일 19:30"]
 
 
 def _latest_report_date() -> str | None:
@@ -32,8 +30,7 @@ def _latest_report_date() -> str | None:
 
 
 def data_mode_label() -> str:
-    """사이드바/캡션용."""
-    return "닐슨+Mock 하이브리드" if _latest_report_date() else "Mock 데이터"
+    return "닐슨 실데이터" if _latest_report_date() else "실데이터 없음"
 
 
 def _weekday_ko(report_date: str) -> str:
@@ -113,7 +110,6 @@ def _nielsen_competition_df(report_date: str) -> pd.DataFrame:
 
 
 def build_nielsen_shows(report_date: str | None = None) -> list[dict]:
-    """닐슨 ENA/ENA PLAY 프로그램을 예능 카탈로그 행으로 변환."""
     report_date = report_date or _latest_report_date()
     if not report_date:
         return []
@@ -132,7 +128,6 @@ def build_nielsen_shows(report_date: str | None = None) -> list[dict]:
     if ena.empty:
         return []
 
-    # 프로그램별 최고 시청률 회차
     idx = ena.groupby("program_name")["rating"].idxmax()
     best = ena.loc[idx].sort_values("rating", ascending=False).head(10)
 
@@ -166,80 +161,44 @@ def build_nielsen_shows(report_date: str | None = None) -> list[dict]:
     return shows
 
 
-def build_mock_shows() -> list[dict]:
-    rows = []
-    for show in mock.ENA_VARIETY_SHOWS:
-        metrics = mock.PERFORMANCE_METRICS[show["id"]]
-        rows.append(
-            {
-                **show,
-                **metrics,
-                "channel": "ENA",
-                "data_source": "mock",
-                "report_date": None,
-                "start_time": None,
-                "share": None,
-            }
-        )
-    return rows
-
-
 def get_variety_catalog() -> list[dict]:
-    """Mock + 닐슨 프로그램 카탈로그 (실데이터 우선 정렬)."""
-    nielsen_shows = build_nielsen_shows()
-    mock_shows = build_mock_shows()
-    # 동일 제목이면 닐슨 우선
-    by_title = {s["title"]: s for s in mock_shows}
-    for s in nielsen_shows:
-        by_title[s["title"]] = s
-    catalog = list(by_title.values())
-    catalog.sort(
-        key=lambda s: (
-            0 if s.get("data_source") == "nielsen" else 1,
-            -float(s.get("rating") or 0),
-        )
-    )
+    catalog = build_nielsen_shows()
+    catalog.sort(key=lambda s: -float(s.get("rating") or 0))
     return catalog
 
 
 def get_ena_variety_df() -> pd.DataFrame:
-    return pd.DataFrame(get_variety_catalog())
+    catalog = get_variety_catalog()
+    if not catalog:
+        return pd.DataFrame(
+            columns=[
+                "id",
+                "title",
+                "genre",
+                "slot",
+                "day",
+                "time",
+                "status",
+                "cast",
+                "weeks_on_air",
+                "channel",
+                "data_source",
+                "report_date",
+                "rating",
+                "buzz_index",
+                "revenue_million",
+                "trend",
+                "rating_history",
+                "target_rating",
+                "target_buzz",
+                "target_revenue_million",
+            ]
+        )
+    return pd.DataFrame(catalog)
 
 
 def get_competition_data(slot: str) -> pd.DataFrame:
-    """동시간대 경쟁: Mock 슬롯 + 닐슨 동일 시각 실데이터."""
     rows: list[dict] = []
-
-    # Mock
-    ratings_map = {
-        "ENA 먹을텐데": 1.8,
-        "놀뭐": 3.2,
-        "한끼줍쇼": 1.5,
-        "전지적 참견": 2.8,
-        "ENA 술래잡기": 2.4,
-        "런닝맨": 2.9,
-        "놀뭐 스핀오프": 1.7,
-        "ENA 글로벌 퀴즈쇼": 1.1,
-        "1박2일": 4.5,
-        "나 혼자 산다": 3.8,
-        "ENA 캠핑클럽": 2.8,
-        "놀면 뭐하니": 2.1,
-        "ENA 웃음공장": 0.9,
-        "동상이몽": 2.3,
-        "유퀴즈": 3.5,
-    }
-    for s in mock.COMPETITOR_SHOWS.get(slot, []):
-        rows.append(
-            {
-                "channel": s["channel"],
-                "title": s["title"],
-                "is_ena": bool(s["is_ena"]),
-                "rating": float(ratings_map.get(s["title"], 1.5)),
-                "data_source": "mock",
-            }
-        )
-
-    # Nielsen — 시각(HH:MM) 기준
     hhmm = _parse_slot_hhmm(slot)
     report_date = _latest_report_date()
     if hhmm and report_date:
@@ -249,10 +208,8 @@ def get_competition_data(slot: str) -> pd.DataFrame:
             comp = pd.DataFrame()
 
         if not comp.empty:
-            prefix = hhmm
-            matched = comp[comp["start_time"].astype(str).str.startswith(prefix)]
+            matched = comp[comp["start_time"].astype(str).str.startswith(hhmm)]
             if matched.empty:
-                # 같은 시(hour)로 확장 후, ENA 최고 시청 시각의 경쟁 구도로 맞춤
                 hour = hhmm[:2]
                 hour_rows = comp[comp["start_time"].astype(str).str.startswith(f"{hour}:")]
                 if not hour_rows.empty:
@@ -265,7 +222,6 @@ def get_competition_data(slot: str) -> pd.DataFrame:
                         start = ena_best.iloc[0]["start_time"]
                         matched = comp[comp["start_time"] == start]
                     else:
-                        # hour 내 채널별 최고
                         matched = (
                             hour_rows.sort_values("rating", ascending=False)
                             .groupby("channel_name", as_index=False)
@@ -289,20 +245,18 @@ def get_competition_data(slot: str) -> pd.DataFrame:
         return pd.DataFrame(columns=["channel", "title", "is_ena", "rating", "data_source"])
 
     df = pd.DataFrame(rows)
-    # channel+title 중복 시 닐슨 우선
-    df["_prio"] = df["data_source"].map({"nielsen": 0, "mock": 1}).fillna(2)
-    df = (
-        df.sort_values(["_prio", "rating"], ascending=[True, False])
+    return (
+        df.sort_values("rating", ascending=False)
         .drop_duplicates(subset=["channel", "title"], keep="first")
-        .drop(columns=["_prio"])
-        .sort_values("rating", ascending=False)
         .reset_index(drop=True)
     )
-    return df
 
 
 def get_top_bottom_groups() -> tuple[list[dict], list[dict]]:
     df = get_ena_variety_df()
+    if df.empty:
+        return [], []
+    df = df.copy()
     df["value_score"] = df["rating"] * 30 + df["buzz_index"] * 0.7
     df = df.sort_values("value_score", ascending=False)
     return df.head(2).to_dict("records"), df.tail(2).to_dict("records")
@@ -310,10 +264,19 @@ def get_top_bottom_groups() -> tuple[list[dict], list[dict]]:
 
 def get_weekly_summary() -> dict:
     df = get_ena_variety_df()
+    if df.empty:
+        return {
+            "top_title": "-",
+            "top_rating": 0.0,
+            "rising_count": 0,
+            "avg_rating": 0.0,
+            "total_revenue": 0.0,
+            "nielsen_count": 0,
+            "report_date": _latest_report_date(),
+        }
     top_show = df.loc[df["rating"].idxmax()]
     rising = df[df["trend"] == "상승"]
-    nielsen_count = int((df["data_source"] == "nielsen").sum()) if "data_source" in df.columns else 0
-    mock_count = int((df["data_source"] == "mock").sum()) if "data_source" in df.columns else len(df)
+    nielsen_count = int((df["data_source"] == "nielsen").sum()) if "data_source" in df.columns else len(df)
     return {
         "top_title": top_show["title"],
         "top_rating": float(top_show["rating"]),
@@ -321,13 +284,14 @@ def get_weekly_summary() -> dict:
         "avg_rating": round(float(df["rating"].mean()), 4),
         "total_revenue": float(df["revenue_million"].sum()),
         "nielsen_count": nielsen_count,
-        "mock_count": mock_count,
         "report_date": _latest_report_date(),
     }
 
 
 def get_goal_vs_actual_df() -> pd.DataFrame:
     df = get_ena_variety_df().copy()
+    if df.empty:
+        return df
     df["rating_achv"] = (df["rating"] / df["target_rating"] * 100).round(1)
     df["buzz_achv"] = (df["buzz_index"] / df["target_buzz"] * 100).round(1)
     df["revenue_achv"] = (df["revenue_million"] / df["target_revenue_million"] * 100).round(1)
@@ -340,6 +304,18 @@ def get_goal_vs_actual_df() -> pd.DataFrame:
 
 def get_goal_summary() -> dict:
     df = get_goal_vs_actual_df()
+    if df.empty:
+        return {
+            "avg_achv": 0.0,
+            "achieved_count": 0,
+            "total_count": 0,
+            "avg_rating_achv": 0.0,
+            "avg_revenue_achv": 0.0,
+            "top_title": "-",
+            "top_achv": 0.0,
+            "bottom_title": "-",
+            "bottom_achv": 0.0,
+        }
     achieved = df[df["goal_status"] == "목표 달성"]
     return {
         "avg_achv": round(float(df["overall_achv"].mean()), 1),
@@ -358,8 +334,7 @@ def get_trend_data(show_id: str, period: str = "week") -> pd.DataFrame:
     catalog = {s["id"]: s for s in get_variety_catalog()}
     show = catalog.get(show_id)
     if not show:
-        # fallback mock
-        return mock.get_trend_data(show_id, period)
+        return pd.DataFrame(columns=["period", "rating", "title"])
 
     history = show.get("rating_history") or [show.get("rating", 0)]
     title = show["title"]
@@ -380,8 +355,7 @@ def get_trend_data(show_id: str, period: str = "week") -> pd.DataFrame:
 
 
 def nielsen_slot_options() -> list[str]:
-    """신규 기획 편성 후보: Mock 슬롯 + 닐슨 주요 시각."""
-    slots = list(mock.COMPETITOR_SHOWS.keys())
+    slots = list(DEFAULT_SLOTS)
     report_date = _latest_report_date()
     if not report_date:
         return slots
@@ -397,7 +371,6 @@ def nielsen_slot_options() -> list[str]:
 
 
 def analyze_new_proposal(title: str, genre: str, slot: str, cast: str) -> dict:
-    """신규 기획 분석 — 경쟁 시청률에 닐슨 실데이터 반영."""
     cast_list = [c.strip() for c in cast.split(",") if c.strip()] or ["미정"]
     cast_score = min(
         10,
@@ -406,39 +379,32 @@ def analyze_new_proposal(title: str, genre: str, slot: str, cast: str) -> dict:
 
     slot_competition = get_competition_data(slot)
     if slot_competition.empty or "rating" not in slot_competition.columns:
-        avg_comp_rating = 2.0
+        avg_comp_rating = 0.0
         competition_records = []
     else:
         avg_comp_rating = float(slot_competition["rating"].mean())
         competition_records = slot_competition.to_dict("records")
 
-    # 닐슨 점유 비중이 있으면 경쟁 점수에 가중
     nielsen_rows = [r for r in competition_records if r.get("data_source") == "nielsen"]
     competition_score = max(1, min(10, round(10 - avg_comp_rating * 1.5, 1)))
     if nielsen_rows:
-        # 케이블 시청률 스케일(대개 <1) → 점수 보정
         avg_n = float(np.mean([r["rating"] for r in nielsen_rows]))
         competition_score = max(1, min(10, round(10 - avg_n * 8, 1)))
 
     live = get_variety_catalog()
-    similar = [
-        s
-        for s in mock.ENDED_SHOWS + live
-        if genre.split()[0] in s.get("genre", "")
-    ]
+    similar = [s for s in live if genre.split()[0] in s.get("genre", "")]
     format_score = 6.0
     if similar:
-        avg_sim = float(np.mean([s.get("avg_rating", s.get("rating", 1.5)) for s in similar]))
+        avg_sim = float(np.mean([s.get("avg_rating", s.get("rating", 0.2)) for s in similar]))
         format_score = min(10, round(avg_sim * 3 if avg_sim >= 1 else avg_sim * 12, 1))
 
-    scores, score_details = mock._build_score_details(cast_score, competition_score, format_score)
+    scores, score_details = engine._build_score_details(cast_score, competition_score, format_score)
     overall = round(float(np.mean(list(scores.values()))), 1)
-    logline = mock._build_logline(title, genre, cast_list)
-    swot = mock._build_swot_analysis(
+    logline = engine._build_logline(title, genre, cast_list)
+    swot = engine._build_swot_analysis(
         title, genre, slot, cast_list, scores, overall, competition_records, logline
     )
 
-    # SWOT에 닐슨 근거 한 줄 보강
     if nielsen_rows:
         top_rival = max(nielsen_rows, key=lambda r: r.get("rating", 0))
         swot["neutral"] = list(swot.get("neutral") or [])
@@ -493,7 +459,7 @@ def analyze_new_proposal(title: str, genre: str, slot: str, cast: str) -> dict:
 
 
 def analyze_uploaded_proposal(filename: str, file_bytes: bytes | None = None) -> dict:
-    parsed = mock.parse_uploaded_proposal(filename, file_bytes)
+    parsed = engine.parse_uploaded_proposal(filename, file_bytes)
     result = analyze_new_proposal(
         parsed["title"],
         parsed["genre"] if parsed["genre"] != "미정" else "리얼리티 예능",

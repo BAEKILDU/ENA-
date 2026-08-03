@@ -61,8 +61,8 @@ def render() -> None:
         f"최고 성과 '{summary_data['top_title']}' ({summary_data['top_rating']}%) · "
         f"상승 트렌드 {summary_data['rising_count']}편 · "
         f"누적 부가매출 약 {format_revenue_won(summary_data['total_revenue'])}. "
-        f"닐슨 {summary_data.get('nielsen_count', 0)}편 + Mock {summary_data.get('mock_count', 0)}편"
-        + (f" · 닐슨 기준일 {summary_data['report_date']}" if summary_data.get("report_date") else "")
+        f"닐슨 실데이터 {summary_data.get('nielsen_count', 0)}편"
+        + (f" · 기준일 {summary_data['report_date']}" if summary_data.get("report_date") else "")
         + "."
     )
 
@@ -75,32 +75,35 @@ def render() -> None:
         ]
     )
 
-    render_section_title("프로그램별 성과 (막대 그래프)")
-    st.plotly_chart(
-        bar_chart(
-            x=df["title"].tolist(),
-            y=df["rating"].tolist(),
-            title="",
-            y_title="시청률 (%)",
-            text_template="%{y}%",
-            highlight_indices={0},
-        ),
-        use_container_width=True,
-    )
+    if df.empty:
+        st.info("표시할 닐슨 예능 데이터가 없습니다. 관리자 페이지에서 닐슨 데이터를 업로드하거나 Supabase 연결을 확인하세요.")
+    else:
+        render_section_title("프로그램별 성과 (막대 그래프)")
+        st.plotly_chart(
+            bar_chart(
+                x=df["title"].tolist(),
+                y=df["rating"].tolist(),
+                title="",
+                y_title="시청률 (%)",
+                text_template="%{y}%",
+                highlight_indices={0},
+            ),
+            use_container_width=True,
+        )
 
-    render_section_title("시청률 · 화제성 비교")
-    st.plotly_chart(
-        grouped_bar_chart(
-            categories=df["title"].tolist(),
-            series={
-                "시청률(%)": df["rating"].tolist(),
-                "화제성(점)": df["buzz_index"].tolist(),
-            },
-            title="",
-            y_title="지표",
-        ),
-        use_container_width=True,
-    )
+        render_section_title("시청률 · 화제성 비교")
+        st.plotly_chart(
+            grouped_bar_chart(
+                categories=df["title"].tolist(),
+                series={
+                    "시청률(%)": df["rating"].tolist(),
+                    "화제성(점)": df["buzz_index"].tolist(),
+                },
+                title="",
+                y_title="지표",
+            ),
+            use_container_width=True,
+        )
 
     render_section_title("주요 분석 모듈")
     c1, c2, c3 = st.columns(3, gap="large")
@@ -124,7 +127,7 @@ def render() -> None:
                 "02. 시청률·화제성 기준 상·하위 그룹 분류",
                 "03. 주/월/연 단위 트렌드 및 가치 매트릭스",
             ],
-            highlight="닐슨+Mock 하이브리드",
+            highlight="닐슨 실데이터",
             highlight_color=COLORS["magenta"],
             accent=COLORS["magenta"],
         )
@@ -165,4 +168,4 @@ def render() -> None:
             "new_content",
         )
 
-    st.caption("※ 예능/신규 기획: 닐슨 실데이터 + Mock 하이브리드 · 닐슨 채널 시청률: Supabase 실데이터")
+    st.caption("※ 예능/신규 기획/닐슨 채널 시청률: Supabase 닐슨 실데이터")

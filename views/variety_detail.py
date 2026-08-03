@@ -1,6 +1,5 @@
 """예능 콘텐츠 가치+ 상세 페이지."""
 
-import pandas as pd
 import streamlit as st
 
 from data.hybrid_data import (
@@ -19,18 +18,23 @@ def render() -> None:
 
     df = get_ena_variety_df()
     catalog = get_variety_catalog()
+    if df.empty or not catalog:
+        st.info("표시할 닐슨 예능 데이터가 없습니다. 관리자 페이지에서 데이터를 업로드하세요.")
+        if st.button("← 예능 가치+로 돌아가기", key="back_variety_empty"):
+            navigate_to("variety")
+        return
+
     show_id = st.selectbox(
         "콘텐츠 선택",
         options=df["id"].tolist(),
         format_func=lambda x: next(
-            (f"{s['title']} [{s.get('data_source', 'mock')}]" for s in catalog if s["id"] == x),
+            (s["title"] for s in catalog if s["id"] == x),
             x,
         ),
         key="detail_show",
     )
     show = next(s for s in catalog if s["id"] == show_id)
     metrics = df[df["id"] == show_id].iloc[0]
-    source_label = "닐슨 실데이터" if show.get("data_source") == "nielsen" else "Mock 데이터"
 
     render_summary_box(
         f"'{show['title']}' ({show['genre']}, {show['slot']}) — "
@@ -38,14 +42,14 @@ def render() -> None:
         f"화제성 {metrics['buzz_index']}점, "
         f"부가매출 {format_revenue_won(metrics['revenue_million'])}, 트렌드 {metrics['trend']}. "
         f"방송 {show['weeks_on_air']}주차 · 출연: {', '.join(show['cast'])}. "
-        f"데이터 출처: {source_label}."
+        f"데이터 출처: 닐슨 실데이터."
     )
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("시청률", f"{metrics['rating']}%")
     c2.metric("화제성", f"{metrics['buzz_index']}점")
     c3.metric("부가매출", format_revenue_won(metrics["revenue_million"]))
-    c4.metric("출처", "닐슨" if show.get("data_source") == "nielsen" else "Mock")
+    c4.metric("출처", "닐슨")
 
     period = st.radio("트렌드 기간", ["주", "월", "연"], horizontal=True, key="detail_period")
     period_map = {"주": "week", "월": "month", "연": "year"}
@@ -93,7 +97,6 @@ def render() -> None:
         highlight = {i for i, ena in enumerate(comp_df["is_ena"].tolist()) if ena}
         labels = [
             f"{r.channel} · {r.title}"
-            + (f" [{r.data_source}]" if hasattr(r, "data_source") else "")
             for r in comp_df.itertuples()
         ]
         st.plotly_chart(
