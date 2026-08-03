@@ -41,7 +41,6 @@ PAGES = {
 
 SIDEBAR_SECTIONS = [
     ("메인", ["home"]),
-    ("닐슨 실데이터", ["nielsen_ratings"]),
     ("예능 분석", ["variety", "variety_detail"]),
     ("신규 기획", ["new_content"]),
 ]
@@ -68,7 +67,7 @@ with st.sidebar:
         st.session_state["current_page"] = page_key
 
     st.divider()
-    st.caption("닐슨 실데이터 · v0.8")
+    st.caption("ENA 가치+ · v0.8")
     st.caption("작성: 콘텐츠제작센터")
     st.markdown("")
     if st.button(

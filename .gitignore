@@ -7,6 +7,10 @@
 # Streamlit secrets (배포 시 Streamlit Cloud / 호스트 secrets 사용)
 .streamlit/secrets.toml
 
+# 로컬 프롬프트·메모 (배포 불필요)
+ENA PLUS PROM*.txt
+ENA_ValuePlus_PRD_Prompt.txt
+
 # ── Python ──
 .venv/
 venv/
@@ -53,3 +57,9 @@ temp/
 # 로컬에만 있는 참고/로고 원본 (루트)
 /*.png
 pro2.txt
+
+# 분석 임시 스크립트
+scripts/_analyze_*.py
+
+# processed CSV는 커밋 가능 (원본 xlsx는 제외)
+!data/processed/

@@ -83,7 +83,8 @@ def _render_revenue_uploader() -> None:
         "매출/CAPEX 엑셀(`.xlsx` / `.xls`)을 업로드하세요. "
         "처리 시 `revenue_records` 테이블에 적재됩니다. "
         "지원: 일반 매출 템플릿, 오리지널 콘텐츠 관리(summary·CAPEX) 파일. "
-        "인식 컬럼 예: 프로그램명/타이틀/콘텐츠 + 매출/CAPEX/제작비"
+        "일괄 적용: `python scripts/extract_and_apply_original_content.py` "
+        "(CSV 생성 + revenue_records/original_programs 업로드)."
     )
     st.download_button(
         label="매출 템플릿 다운로드 (.xlsx)",

@@ -12,6 +12,7 @@ import pandas as pd
 
 from data import analysis_engine as engine
 from data import nielsen as nd
+from data import original_content as oc
 
 PREFERRED_TARGET = "개인2049"
 ENA_CHANNELS = {"ENA", "ENA PLAY", "ENA DRAMA", "ENA STORY"}
@@ -132,12 +133,19 @@ def build_nielsen_shows(report_date: str | None = None) -> list[dict]:
     best = ena.loc[idx].sort_values("rating", ascending=False).head(10)
 
     weekday = _weekday_ko(report_date)
+    revenue_map = oc.fetch_revenue_map()
     shows: list[dict] = []
     for row in best.itertuples():
         title = str(row.program_name)
         hhmm = _start_to_hhmm(row.start_time) or "22:00"
         channel = str(row.channel_name)
         metrics = _metrics_from_rating(float(row.rating))
+        # 오리지널 콘텐츠 CAPEX(백만)가 있으면 매출에 반영
+        real_rev = oc.match_revenue(title, revenue_map)
+        if real_rev is not None:
+            metrics["revenue_million"] = round(float(real_rev), 2)
+            metrics["target_revenue_million"] = max(40, int(float(real_rev) * 0.85))
+            metrics["revenue_source"] = "original_capex"
         show_id = _stable_id("nls", f"{channel}:{title}")
         shows.append(
             {
@@ -161,8 +169,71 @@ def build_nielsen_shows(report_date: str | None = None) -> list[dict]:
     return shows
 
 
+def get_original_variety_shows() -> list[dict]:
+    """오리지널 예능 summary → 예능 카탈로그 보강용."""
+    catalog = oc.fetch_program_catalog(category="예능")
+    shows: list[dict] = []
+    for item in catalog:
+        rating = float(item.get("rating") or 0)
+        metrics = _metrics_from_rating(rating)
+        rev = item.get("revenue_million")
+        if rev is not None:
+            metrics["revenue_million"] = round(float(rev), 2)
+            metrics["target_revenue_million"] = max(40, int(float(rev) * 0.85))
+            metrics["revenue_source"] = "original_capex"
+        title = str(item["program_name"])
+        ep = item.get("episodes")
+        try:
+            weeks = int(ep) if ep is not None and not (isinstance(ep, float) and pd.isna(ep)) else 1
+        except (TypeError, ValueError):
+            weeks = 1
+        shows.append(
+            {
+                "id": _stable_id("org", title),
+                "title": title,
+                "genre": _infer_genre(title),
+                "slot": "-",
+                "day": "-",
+                "time": "-",
+                "status": "방송중",
+                "cast": ["오리지널 콘텐츠"],
+                "weeks_on_air": weeks,
+                "channel": item.get("channel") or "ENA",
+                "data_source": "original_content",
+                "report_date": item.get("report_date"),
+                "start_time": None,
+                "share": None,
+                **metrics,
+            }
+        )
+    return shows
+
+
 def get_variety_catalog() -> list[dict]:
-    catalog = build_nielsen_shows()
+    nielsen = build_nielsen_shows()
+    original = get_original_variety_shows()
+    # 닐슨 우선, 없는 타이틀만 오리지널로 보강
+    by_key: dict[str, dict] = {}
+    for s in original + nielsen:
+        key = str(s.get("title") or "").replace(" ", "").upper()
+        if not key:
+            continue
+        existing = by_key.get(key)
+        if existing is None:
+            by_key[key] = s
+            continue
+        # nielsen 이 있으면 시청률 유지 + CAPEX 매출 병합
+        if s.get("data_source") == "nielsen":
+            if existing.get("revenue_source") == "original_capex":
+                s = {**s, "revenue_million": existing["revenue_million"],
+                     "target_revenue_million": existing["target_revenue_million"],
+                     "revenue_source": "original_capex"}
+            by_key[key] = s
+        elif existing.get("data_source") != "nielsen" and s.get("revenue_source") == "original_capex":
+            existing["revenue_million"] = s["revenue_million"]
+            existing["target_revenue_million"] = s["target_revenue_million"]
+            existing["revenue_source"] = "original_capex"
+    catalog = list(by_key.values())
     catalog.sort(key=lambda s: -float(s.get("rating") or 0))
     return catalog
 
