@@ -204,7 +204,7 @@ def _render_storage_banner() -> None:
 def _render_target_rating_editor() -> None:
     render_section_title("4. 콘텐츠별 목표 시청률")
     st.caption(
-        "업로드된 데이터 타이틀을 선택해 목표 시청률(%)을 입력하면 "
+        "업로드된 데이터 타이틀을 선택해 목표 시청률(%)·화제성·매출을 입력하면 "
         "홈·예능·상세·목표달성 등 각 섹션에 자동 반영됩니다."
     )
     local_db.init_schema()
@@ -221,6 +221,12 @@ def _render_target_rating_editor() -> None:
     selected = st.selectbox("타이틀 선택", options=options, key="admin_target_title")
     current = saved.get(selected) or {}
     default_val = float(current["target_rating"]) if current.get("target_rating") is not None else 0.0
+    default_buzz = float(current["target_buzz"]) if current.get("target_buzz") is not None else 0.0
+    default_rev_eok = (
+        float(current["target_revenue_million"]) / 100.0
+        if current.get("target_revenue_million") is not None
+        else 0.0
+    )
     category_options = ["예능", "드라마"]
     raw_cat = str(current.get("category") or title_meta.get(selected) or "").strip()
     default_cat = raw_cat if raw_cat in category_options else "예능"
@@ -244,19 +250,46 @@ def _render_target_rating_editor() -> None:
             key="admin_target_cat",
         )
 
-    if st.button("목표 시청률 저장 · 섹션 반영", type="primary", key="admin_target_save"):
+    b1, b2 = st.columns(2)
+    with b1:
+        target_buzz = st.number_input(
+            "목표 화제성 (점)",
+            min_value=0.0,
+            max_value=100.0,
+            value=float(default_buzz),
+            step=1.0,
+            format="%.0f",
+            key="admin_target_buzz",
+        )
+    with b2:
+        target_rev_eok = st.number_input(
+            "목표 매출 (억원)",
+            min_value=0.0,
+            max_value=100000.0,
+            value=float(default_rev_eok),
+            step=0.01,
+            format="%.2f",
+            key="admin_target_revenue",
+        )
+
+    if st.button("목표 저장 · 섹션 반영", type="primary", key="admin_target_save"):
         local_db.upsert_target_ratings(
             [
                 {
                     "program_name": selected,
                     "category": category,
                     "target_rating": round(float(target_val), 3),
+                    "target_buzz": float(target_buzz),
+                    "target_revenue_million": round(float(target_rev_eok) * 100.0, 2),
                     "note": "admin",
                 }
             ]
         )
         _clear_data_caches()
-        st.success(f"'{selected}' 목표 시청률 {float(target_val):.3f}% 저장 · 각 섹션에 반영됨")
+        st.success(
+            f"'{selected}' 목표 시청률 {float(target_val):.3f}% · "
+            f"화제성 {int(target_buzz)}점 · 매출 {float(target_rev_eok):.2f}억원 저장 · 각 섹션에 반영됨"
+        )
         st.rerun()
 
     rows = local_db.list_target_ratings()
@@ -269,6 +302,16 @@ def _render_target_rating_editor() -> None:
                     "목표 시청률(%)": (
                         round(float(r["target_rating"]), 3)
                         if r.get("target_rating") is not None
+                        else None
+                    ),
+                    "목표 화제성": (
+                        int(round(float(r["target_buzz"])))
+                        if r.get("target_buzz") is not None
+                        else None
+                    ),
+                    "목표 매출(억)": (
+                        round(float(r["target_revenue_million"]) / 100.0, 2)
+                        if r.get("target_revenue_million") is not None
                         else None
                     ),
                     "수정시각": r.get("updated_at"),

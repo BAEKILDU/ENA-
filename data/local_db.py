@@ -105,6 +105,8 @@ CREATE TABLE IF NOT EXISTS program_target_ratings (
   program_name TEXT NOT NULL UNIQUE,
   category TEXT,
   target_rating REAL,
+  target_buzz REAL,
+  target_revenue_million REAL,
   note TEXT,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -149,8 +151,23 @@ def init_schema() -> Path:
     path = db_path()
     with connect() as conn:
         conn.executescript(_SCHEMA_SQL)
+        _migrate_target_columns(conn)
         conn.commit()
     return path
+
+
+def _migrate_target_columns(conn: sqlite3.Connection) -> None:
+    """기존 DB에 목표 화제성·매출 컬럼 추가."""
+    try:
+        cols = {str(r[1]) for r in conn.execute("PRAGMA table_info(program_target_ratings)")}
+    except Exception:  # noqa: BLE001
+        return
+    if "target_buzz" not in cols:
+        conn.execute("ALTER TABLE program_target_ratings ADD COLUMN target_buzz REAL")
+    if "target_revenue_million" not in cols:
+        conn.execute(
+            "ALTER TABLE program_target_ratings ADD COLUMN target_revenue_million REAL"
+        )
 
 
 def _serialize_value(v: Any) -> Any:
@@ -220,11 +237,16 @@ def upsert_target_ratings(rows: list[dict[str, Any]]) -> int:
         for r in rows:
             conn.execute(
                 """
-                INSERT INTO program_target_ratings (program_name, category, target_rating, note, updated_at)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                INSERT INTO program_target_ratings (
+                  program_name, category, target_rating, target_buzz,
+                  target_revenue_million, note, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                 ON CONFLICT(program_name) DO UPDATE SET
                   category=excluded.category,
                   target_rating=excluded.target_rating,
+                  target_buzz=excluded.target_buzz,
+                  target_revenue_million=excluded.target_revenue_million,
                   note=excluded.note,
                   updated_at=CURRENT_TIMESTAMP
                 """,
@@ -232,6 +254,8 @@ def upsert_target_ratings(rows: list[dict[str, Any]]) -> int:
                     r.get("program_name"),
                     r.get("category"),
                     r.get("target_rating"),
+                    r.get("target_buzz"),
+                    r.get("target_revenue_million"),
                     r.get("note"),
                 ),
             )
@@ -251,12 +275,37 @@ def load_target_ratings_map() -> dict[str, float]:
         return out
 
 
+def load_admin_targets_map() -> dict[str, dict[str, float]]:
+    """프로그램명 → 목표 시청률/화제성/매출 맵."""
+    init_schema()
+    with connect() as conn:
+        cur = conn.execute(
+            """
+            SELECT program_name, target_rating, target_buzz, target_revenue_million
+            FROM program_target_ratings
+            """
+        )
+        out: dict[str, dict[str, float]] = {}
+        for row in cur.fetchall():
+            entry: dict[str, float] = {}
+            if row["target_rating"] is not None:
+                entry["target_rating"] = float(row["target_rating"])
+            if row["target_buzz"] is not None:
+                entry["target_buzz"] = float(row["target_buzz"])
+            if row["target_revenue_million"] is not None:
+                entry["target_revenue_million"] = float(row["target_revenue_million"])
+            if entry:
+                out[str(row["program_name"])] = entry
+        return out
+
+
 def list_target_ratings() -> list[dict[str, Any]]:
     init_schema()
     with connect() as conn:
         cur = conn.execute(
             """
-            SELECT program_name, category, target_rating, note, updated_at
+            SELECT program_name, category, target_rating, target_buzz,
+                   target_revenue_million, note, updated_at
             FROM program_target_ratings
             ORDER BY updated_at DESC, program_name
             """
@@ -277,6 +326,25 @@ def match_target_rating(program_name: str, targets: dict[str, float] | None = No
         kk = str(k).replace(" ", "").upper().replace("나는SOLO", "나는솔로")
         if norm == kk or norm in kk or kk in norm:
             return float(v)
+    return None
+
+
+def match_admin_targets(
+    program_name: str,
+    targets: dict[str, dict[str, float]] | None = None,
+) -> dict[str, float] | None:
+    """프로그램명 느슨 매칭으로 관리자 목표(시청률·화제성·매출) 조회."""
+    targets = targets if targets is not None else load_admin_targets_map()
+    if not program_name or not targets:
+        return None
+    name = str(program_name).strip()
+    if name in targets:
+        return targets[name]
+    norm = _norm_title(name)
+    for k, v in targets.items():
+        kk = _norm_title(k)
+        if norm == kk or norm in kk or kk in norm:
+            return v
     return None
 
 

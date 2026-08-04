@@ -281,14 +281,20 @@ def get_content_catalog() -> list[dict]:
 
 
 def _apply_admin_target_ratings(shows: list[dict]) -> list[dict]:
-    """관리자에서 입력한 목표 시청률을 각 프로그램에 반영."""
-    targets = local_db.load_target_ratings_map()
+    """관리자에서 입력한 목표 시청률·화제성·매출을 각 프로그램에 반영."""
+    targets = local_db.load_admin_targets_map()
     if not targets or not shows:
         return shows
     for show in shows:
-        matched = local_db.match_target_rating(str(show.get("title") or ""), targets)
-        if matched is not None:
-            show["target_rating"] = round(float(matched), 3)
+        matched = local_db.match_admin_targets(str(show.get("title") or ""), targets)
+        if not matched:
+            continue
+        if matched.get("target_rating") is not None:
+            show["target_rating"] = round(float(matched["target_rating"]), 3)
+        if matched.get("target_buzz") is not None:
+            show["target_buzz"] = int(round(float(matched["target_buzz"])))
+        if matched.get("target_revenue_million") is not None:
+            show["target_revenue_million"] = round(float(matched["target_revenue_million"]), 2)
     return shows
 
 
