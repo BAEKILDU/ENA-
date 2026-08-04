@@ -12,7 +12,7 @@ from data.hybrid_data import (
     get_variety_catalog,
     get_weekly_summary,
 )
-from utils.format import format_revenue_won
+from utils.format import format_rating, format_revenue_won
 from utils.charts import bar_chart, grouped_bar_chart
 from utils.components import (
     navigate_to,
@@ -39,7 +39,7 @@ def _competition_chart(slot: str):
         y=y_vals,
         title="",
         y_title="시청률 (%)",
-        text_template="%{y}%",
+        text_template="%{y:.3f}%",
         highlight_indices=highlight,
     )
     y_max = max(y_vals) if y_vals else 1.0
@@ -54,7 +54,7 @@ def _trend_chart(show_id: str, period: str):
         y=df["rating"].tolist(),
         title="",
         y_title="시청률 (%)",
-        text_template="%{y}%",
+        text_template="%{y:.3f}%",
     )
 
 
@@ -116,7 +116,7 @@ def render() -> None:
         f"시청률·화제성 종합 1위. "
         f"상위 그룹({', '.join(s['title'] for s in top)})은 동시간대 경쟁에서도 우위, "
         f"하위 그룹({', '.join(s['title'] for s in bottom)})은 편성·포맷 재검토 필요. "
-        f"평균 시청률 {summary['avg_rating']}%, "
+        f"평균 시청률 {format_rating(summary['avg_rating'])}, "
         f"누적 부가매출 {format_revenue_won(summary['total_revenue'])}. "
         f"목표 대비 종합 달성률 평균 {goal_summary['avg_achv']}% "
         f"({goal_summary['achieved_count']}/{goal_summary['total_count']}편 목표 달성). "
@@ -150,7 +150,7 @@ def render() -> None:
                 "label": "분석 대상",
                 "value": f"{len(df)}편",
             },
-            {"label": "평균 시청률", "value": f"{summary['avg_rating']}%"},
+            {"label": "평균 시청률", "value": format_rating(summary["avg_rating"])},
             {"label": "상승 트렌드", "value": f"{len(df[df['trend'] == '상승'])}편"},
             {"label": "평균 화제성", "value": f"{round(df['buzz_index'].mean())}점"},
         ]
@@ -194,6 +194,8 @@ def render() -> None:
     ].copy()
     table_df["target_revenue_million"] = (table_df["target_revenue_million"] / 100).round(2)
     table_df["revenue_million"] = (table_df["revenue_million"] / 100).round(2)
+    table_df["target_rating"] = table_df["target_rating"].round(3)
+    table_df["rating"] = table_df["rating"].round(3)
     table_df = table_df.rename(
         columns={
             "title": "프로그램",
@@ -226,7 +228,7 @@ def render() -> None:
             render_group_item(
                 f"0{i}",
                 s["title"],
-                f"{s['slot']} · 시청률 {s['rating']}% · 화제성 {s['buzz_index']} · 트렌드 {s['trend']}",
+                f"{s['slot']} · 시청률 {format_rating(s['rating'])} · 화제성 {s['buzz_index']} · 트렌드 {s['trend']}",
                 highlight="우수",
             )
         if top:
@@ -236,7 +238,7 @@ def render() -> None:
                     y=[s["rating"] for s in top],
                     title="",
                     y_title="시청률 (%)",
-                    text_template="%{y}%",
+                    text_template="%{y:.3f}%",
                 ),
                 use_container_width=True,
             )
@@ -246,7 +248,7 @@ def render() -> None:
             render_group_item(
                 f"0{i}",
                 s["title"],
-                f"{s['slot']} · 시청률 {s['rating']}% · 화제성 {s['buzz_index']} · 트렌드 {s['trend']}",
+                f"{s['slot']} · 시청률 {format_rating(s['rating'])} · 화제성 {s['buzz_index']} · 트렌드 {s['trend']}",
                 highlight="재검토 필요",
             )
         if bottom:
@@ -256,7 +258,7 @@ def render() -> None:
                     y=[s["rating"] for s in bottom],
                     title="",
                     y_title="시청률 (%)",
-                    text_template="%{y}%",
+                    text_template="%{y:.3f}%",
                 ),
                 use_container_width=True,
             )
@@ -296,7 +298,7 @@ def render() -> None:
     st.plotly_chart(_trend_chart(trend_show_id, period_map[period]), use_container_width=True)
 
     st.caption(
-        f"시청률 1위: {top_show['title']} ({top_show['rating']}%) · "
+        f"시청률 1위: {top_show['title']} ({format_rating(top_show['rating'])}) · "
         f"화제성 1위: {buzz_show['title']} ({buzz_show['buzz_index']}점) · "
         f"닐슨 실데이터 {summary.get('nielsen_count', 0)}편"
     )

@@ -12,7 +12,7 @@ from utils.components import (
     render_section_title,
     render_summary_box,
 )
-from utils.format import format_revenue_won
+from utils.format import format_rating, format_revenue_won
 from utils.theme import COLORS
 
 
@@ -77,7 +77,7 @@ def render() -> None:
 
     render_summary_box(
         f"오리지널 콘텐츠 드라마 {drama_n}편 · 예능 {variety_n}편 기준, "
-        f"최고 성과 '{top_title}' ({top_rating}%) · "
+        f"최고 성과 '{top_title}' ({format_rating(top_rating)}) · "
         f"누적 CAPEX 약 {format_revenue_won(total_capex)}. "
         "사이드바 관리자 액션에서 자료를 업로드하면 자동 분류·반영됩니다."
         + (f" · 기준일 {summary_data['report_date']}" if summary_data.get("report_date") else "")
@@ -87,7 +87,7 @@ def render() -> None:
         [
             {"label": "드라마", "value": f"{drama_n}편"},
             {"label": "예능", "value": f"{variety_n}편"},
-            {"label": "최고 시청률", "value": f"{top_rating}%"},
+            {"label": "최고 시청률", "value": format_rating(top_rating)},
             {"label": "누적 CAPEX", "value": format_revenue_won(total_capex)},
         ]
     )
@@ -103,7 +103,7 @@ def render() -> None:
                 y=chart_df["rating"].tolist(),
                 title="",
                 y_title="시청률 (%)",
-                text_template="%{y}%",
+                text_template="%{y:.3f}%",
                 highlight_indices={0},
             ),
             use_container_width=True,

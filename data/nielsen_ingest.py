@@ -41,6 +41,12 @@ def _to_float(value: Any) -> float | None:
         return None
 
 
+def _to_rating(value: Any) -> float | None:
+    """시청률은 소수 3자리로 통일."""
+    v = _to_float(value)
+    return round(v, 3) if v is not None else None
+
+
 def _to_time_str(value: Any) -> str | None:
     """시청시간/방송시간을 text(HH:MM:SS)로. 25시 초과·문자열 모두 허용."""
     if value is None or (isinstance(value, float) and pd.isna(value)):
@@ -158,7 +164,7 @@ def parse_ranking_sheet(
                     "segment": segment,
                     "rank": int(rank),
                     "channel_name": channel,
-                    "rating": _to_float(df.iat[i, start + 2]),
+                    "rating": _to_rating(df.iat[i, start + 2]),
                     "share": _to_float(df.iat[i, start + 3]),
                     "reach": _to_float(df.iat[i, start + 4]),
                     "watch_time": _to_time_str(df.iat[i, start + 5]),
@@ -233,7 +239,7 @@ def parse_competition_sheet(
                             "program_name": left_program,
                             "is_daily_total": is_daily,
                             "target": target,
-                            "rating": _to_float(df.iat[i, 3 + t_idx]),
+                            "rating": _to_rating(df.iat[i, 3 + t_idx]),
                             "share": _to_float(df.iat[i, 6 + t_idx]),
                             "source_file": source_file,
                         }
@@ -259,7 +265,7 @@ def parse_competition_sheet(
                             "program_name": right_program,
                             "is_daily_total": right_daily,
                             "target": target,
-                            "rating": _to_float(df.iat[i, 13 + t_idx]),
+                            "rating": _to_rating(df.iat[i, 13 + t_idx]),
                             "share": _to_float(df.iat[i, 16 + t_idx]),
                             "source_file": source_file,
                         }
@@ -315,7 +321,7 @@ def parse_target_detail_sheet(
             for col, target in targets:
                 # 일부 타깃 라벨이 잘못 밀린 열(예: '남 60대+')은 메트릭 시작이 아닐 수 있음
                 # 시청률 열이 숫자/문자숫자인지만 검사
-                rating = _to_float(df.iat[i, col] if col < df.shape[1] else None)
+                rating = _to_rating(df.iat[i, col] if col < df.shape[1] else None)
                 share = _to_float(df.iat[i, col + 1] if col + 1 < df.shape[1] else None)
                 reach = _to_float(df.iat[i, col + 2] if col + 2 < df.shape[1] else None)
                 watch_time = _to_time_str(df.iat[i, col + 3] if col + 3 < df.shape[1] else None)

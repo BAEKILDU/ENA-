@@ -8,6 +8,7 @@ from typing import Any
 
 import pandas as pd
 
+from utils.format import round_rating
 from utils.config import get_supabase_anon_key, get_supabase_url
 
 PROCESSED = Path(__file__).resolve().parent / "processed"
@@ -152,13 +153,9 @@ def fetch_program_catalog(category: str | None = None) -> list[dict[str, Any]]:
                 "program_name": name,
                 "category": r.get("category"),
                 "episodes": r.get("episodes"),
-                "rating": float(rating) if rating is not None and not pd.isna(rating) else None,
-                "rating_household": r.get("rating_household"),
-                "target_rating": (
-                    float(target_rating)
-                    if target_rating is not None and not pd.isna(target_rating)
-                    else None
-                ),
+                "rating": round_rating(rating),
+                "rating_household": round_rating(r.get("rating_household")),
+                "target_rating": round_rating(target_rating),
                 "revenue_million": float(capex) if capex is not None and not pd.isna(capex) else None,
                 "channel": r.get("channel") or "ENA",
                 "note": r.get("note"),

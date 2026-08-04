@@ -87,6 +87,12 @@ def _num(v: Any) -> float | None:
         return None
 
 
+def _rating(v: Any) -> float | None:
+    """시청률은 소수 3자리로 통일."""
+    n = _num(v)
+    return round(n, 3) if n is not None else None
+
+
 def _date_iso(v: Any) -> str | None:
     if isinstance(v, datetime):
         return v.date().isoformat()
@@ -155,7 +161,7 @@ def _extract_summary(path: Path, report_date: str) -> list[dict]:
         if not title or not category:
             continue
         capex = _num(vals[6]) if len(vals) > 6 else None
-        rating = _num(vals[4]) if len(vals) > 4 else None
+        rating = _rating(vals[4]) if len(vals) > 4 else None
         if capex is None and rating is None:
             continue
         rows.append(
@@ -165,7 +171,7 @@ def _extract_summary(path: Path, report_date: str) -> list[dict]:
                 "program_name": title.replace("그대애게", "그대에게"),
                 "episodes": int(_num(vals[3]) or 0) or None,
                 "rating_target_p2049": rating,
-                "rating_household": _num(vals[5]) if len(vals) > 5 else None,
+                "rating_household": _rating(vals[5]) if len(vals) > 5 else None,
                 "capex_million": capex,
                 "channel": "ENA",
                 "note": _clean_title(vals[7]) if len(vals) > 7 else None,
@@ -195,7 +201,7 @@ def _extract_drama_compare(path: Path, report_date: str) -> list[dict]:
         if not title:
             continue
         episodes = int(_num(vals[4]) or 0) or None
-        rating = _num(vals[6]) if len(vals) > 6 else None
+        rating = _rating(vals[6]) if len(vals) > 6 else None
         capex = _num(vals[11]) if len(vals) > 11 else None
         if not episodes and not rating and not capex:
             continue
@@ -233,7 +239,7 @@ def _extract_variety_compare(path: Path, report_date: str) -> list[dict]:
         if not title:
             continue
         episodes = int(_num(vals[5]) or 0) or None
-        rating = _num(vals[7]) if len(vals) > 7 else None
+        rating = _rating(vals[7]) if len(vals) > 7 else None
         if not episodes and not rating:
             continue
         rows.append(
@@ -334,7 +340,7 @@ def _extract_targets(path: Path, report_date: str) -> pd.DataFrame:
             .replace("나.솔.사.계", "나솔사계")
             .replace("지구마블3", "지구마블3")
         )
-        avg = _num(vals[3]) if len(vals) > 3 else None
+        avg = _rating(vals[3]) if len(vals) > 3 else None
         if avg is None:
             continue
         rows.append(
@@ -365,7 +371,7 @@ def _extract_drama_episodes(path: Path, report_date: str) -> pd.DataFrame:
         if not current_title:
             return
         for i, v in enumerate(vals[4:]):
-            value = _num(v)
+            value = _rating(v) if metric in {"target", "household"} else _num(v)
             if value is None:
                 continue
             rows.append(

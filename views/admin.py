@@ -232,8 +232,8 @@ def _render_target_rating_editor() -> None:
             min_value=0.0,
             max_value=100.0,
             value=float(default_val),
-            step=0.01,
-            format="%.2f",
+            step=0.001,
+            format="%.3f",
             key="admin_target_value",
         )
     with c2:
@@ -250,13 +250,13 @@ def _render_target_rating_editor() -> None:
                 {
                     "program_name": selected,
                     "category": category,
-                    "target_rating": float(target_val),
+                    "target_rating": round(float(target_val), 3),
                     "note": "admin",
                 }
             ]
         )
         _clear_data_caches()
-        st.success(f"'{selected}' 목표 시청률 {target_val}% 저장 · 각 섹션에 반영됨")
+        st.success(f"'{selected}' 목표 시청률 {float(target_val):.3f}% 저장 · 각 섹션에 반영됨")
         st.rerun()
 
     rows = local_db.list_target_ratings()
@@ -266,7 +266,11 @@ def _render_target_rating_editor() -> None:
                 {
                     "타이틀": r["program_name"],
                     "구분": r.get("category") or "-",
-                    "목표 시청률(%)": r.get("target_rating"),
+                    "목표 시청률(%)": (
+                        round(float(r["target_rating"]), 3)
+                        if r.get("target_rating") is not None
+                        else None
+                    ),
                     "수정시각": r.get("updated_at"),
                 }
                 for r in rows

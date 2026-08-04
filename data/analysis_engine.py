@@ -119,7 +119,7 @@ def _build_swot_analysis(
         strengths.append(f"{slot} 편성 전략과 디지털 확산 연계로 초기 도달률을 보완할 수 있음")
 
     weaknesses = [
-        f"{slot} 동시간대 경쟁 강도(평균 시청률 {avg_comp:.1f}%)로 진입 장벽이 존재",
+        f"{slot} 동시간대 경쟁 강도(평균 시청률 {avg_comp:.3f}%)로 진입 장벽이 존재",
         "타겟 시청층이 좁아질 경우 초반 시청률 변동 폭이 커질 수 있음",
     ]
     if feasibility < 7:

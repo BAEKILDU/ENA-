@@ -16,6 +16,7 @@ from utils.components import (
     render_summary_box,
 )
 from utils.export_docx import build_analysis_docx
+from utils.format import format_rating
 
 
 def render() -> None:
@@ -88,9 +89,9 @@ def render() -> None:
     if result.get("similar_shows"):
         st.caption("유사 콘텐츠 참고")
         for s in result["similar_shows"]:
-            rating = s.get("avg_rating", s.get("rating", "-"))
+            rating = s.get("avg_rating", s.get("rating", None))
             st.markdown(
-                f"- {s.get('title', '-')} · {s.get('genre', '')} · 시청률 {rating}%"
+                f"- {s.get('title', '-')} · {s.get('genre', '')} · 시청률 {format_rating(rating)}"
             )
 
     # 7. 부가 사업 및 수익 창출 아이디어

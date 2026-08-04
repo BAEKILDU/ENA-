@@ -85,11 +85,11 @@ def _metrics_from_rating(rating: float) -> dict[str, Any]:
     r = float(rating or 0)
     buzz = int(min(99, max(20, round(r * 80 + 35))))
     revenue = int(max(50, round(r * 1200 + 80)))
-    target_rating = round(max(0.05, r * 0.85), 4)
-    history = [round(max(0, r * f), 4) for f in (0.7, 0.8, 0.85, 0.9, 0.95, 0.98, 1.0, 1.0)]
+    target_rating = round(max(0.05, r * 0.85), 3)
+    history = [round(max(0, r * f), 3) for f in (0.7, 0.8, 0.85, 0.9, 0.95, 0.98, 1.0, 1.0)]
     trend = "상승" if r >= 0.2 else ("유지" if r >= 0.05 else "하락")
     return {
-        "rating": round(r, 4),
+        "rating": round(r, 3),
         "buzz_index": buzz,
         "revenue_million": revenue,
         "trend": trend,
@@ -190,9 +190,9 @@ def get_original_variety_shows() -> list[dict]:
             metrics["revenue_source"] = "none"
         tgt = item.get("target_rating")
         if tgt is not None and not (isinstance(tgt, float) and pd.isna(tgt)):
-            metrics["target_rating"] = round(float(tgt), 4)
+            metrics["target_rating"] = round(float(tgt), 3)
         if not has_actual and rating == 0 and item.get("rating") is None:
-            metrics["rating"] = round(float(tgt or 0), 4) if tgt is not None else 0.0
+            metrics["rating"] = round(float(tgt or 0), 3) if tgt is not None else 0.0
         title = str(item["program_name"])
         ep = item.get("episodes")
         try:
@@ -288,7 +288,7 @@ def _apply_admin_target_ratings(shows: list[dict]) -> list[dict]:
     for show in shows:
         matched = local_db.match_target_rating(str(show.get("title") or ""), targets)
         if matched is not None:
-            show["target_rating"] = round(float(matched), 4)
+            show["target_rating"] = round(float(matched), 3)
     return shows
 
 
@@ -404,7 +404,7 @@ def get_competition_data(slot: str) -> pd.DataFrame:
                         "channel": ch,
                         "title": title,
                         "is_ena": ch in ENA_CHANNELS,
-                        "rating": round(float(r["rating"] or 0), 4),
+                        "rating": round(float(r["rating"] or 0), 3),
                         "data_source": "nielsen",
                     }
                 )
@@ -447,9 +447,9 @@ def get_weekly_summary() -> dict:
     nielsen_count = int((df["data_source"] == "nielsen").sum()) if "data_source" in df.columns else len(df)
     return {
         "top_title": top_show["title"],
-        "top_rating": float(top_show["rating"]),
+        "top_rating": round(float(top_show["rating"]), 3),
         "rising_count": int(len(rising)),
-        "avg_rating": round(float(df["rating"].mean()), 4),
+        "avg_rating": round(float(df["rating"].mean()), 3),
         "total_revenue": float(df["revenue_million"].sum()),
         "nielsen_count": nielsen_count,
         "report_date": _latest_report_date(),
@@ -513,11 +513,11 @@ def get_trend_data(show_id: str, period: str = "week") -> pd.DataFrame:
     elif period == "month":
         labels = ["1월", "2월", "3월", "4월", "5월", "6월"]
         base = float(np.mean(history))
-        values = [round(base * f, 4) for f in (0.85, 0.9, 0.95, 1.0, 1.02, 1.0)]
+        values = [round(base * f, 3) for f in (0.85, 0.9, 0.95, 1.0, 1.02, 1.0)]
     else:
         labels = ["2023", "2024", "2025", "2026"]
         base = float(np.mean(history))
-        values = [round(base * f, 4) for f in (0.7, 0.85, 0.95, 1.0)]
+        values = [round(base * f, 3) for f in (0.7, 0.85, 0.95, 1.0)]
 
     return pd.DataFrame({"period": labels, "rating": values, "title": title})
 

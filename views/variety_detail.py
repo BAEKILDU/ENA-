@@ -8,7 +8,7 @@ from data.hybrid_data import (
     get_trend_data,
     get_variety_catalog,
 )
-from utils.format import format_revenue_won
+from utils.format import format_rating, format_revenue_won
 from utils.charts import bar_chart, grouped_bar_chart
 from utils.components import navigate_to, render_page_header, render_section_title, render_summary_box
 
@@ -38,7 +38,7 @@ def render() -> None:
 
     render_summary_box(
         f"'{show['title']}' ({show['genre']}, {show['slot']}) — "
-        f"시청률 {metrics['rating']}%, "
+        f"시청률 {format_rating(metrics['rating'])}, "
         f"화제성 {metrics['buzz_index']}점, "
         f"부가매출 {format_revenue_won(metrics['revenue_million'])}, 트렌드 {metrics['trend']}. "
         f"방송 {show['weeks_on_air']}주차 · 출연: {', '.join(show['cast'])}. "
@@ -46,7 +46,7 @@ def render() -> None:
     )
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("시청률", f"{metrics['rating']}%")
+    c1.metric("시청률", format_rating(metrics["rating"]))
     c2.metric("화제성", f"{metrics['buzz_index']}점")
     c3.metric("부가매출", format_revenue_won(metrics["revenue_million"]))
     c4.metric("출처", "닐슨")
@@ -62,7 +62,7 @@ def render() -> None:
             y=trend_df["rating"].tolist(),
             title="",
             y_title="시청률 (%)",
-            text_template="%{y}%",
+            text_template="%{y:.3f}%",
         ),
         use_container_width=True,
     )
@@ -105,7 +105,7 @@ def render() -> None:
                 y=comp_df["rating"].tolist(),
                 title="",
                 y_title="시청률 (%)",
-                text_template="%{y}%",
+                text_template="%{y:.3f}%",
                 highlight_indices=highlight,
             ),
             use_container_width=True,
