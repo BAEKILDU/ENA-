@@ -10,7 +10,7 @@ from typing import Any
 
 import pandas as pd
 
-from data.supabase_upload import get_supabase_client, replace_and_upload
+from data.supabase_upload import upload_table
 
 # 헤더 별칭 → 표준 컬럼
 COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
@@ -403,13 +403,20 @@ def upload_revenue_file(path: str | Path, *, dry_run: bool = False) -> dict[str,
     if dry_run:
         return summary
 
-    client = get_supabase_client()
+    backends: set[str] = set()
+    warnings: list[str] = []
+    total = 0
     by_date: dict[str, list[dict]] = {}
     for row in rows:
         by_date.setdefault(row["report_date"], []).append(row)
-
-    total = 0
     for d, group in by_date.items():
-        total += replace_and_upload(client, "revenue_records", d, group)
+        result = upload_table("revenue_records", d, group)
+        total += int(result["uploaded"])
+        backends.add(result.get("backend") or "none")
+        if result.get("warning"):
+            warnings.append(str(result["warning"]))
     summary["uploaded"]["revenue_records"] = total
+    summary["backend"] = ",".join(sorted(backends))
+    if warnings:
+        summary["warnings"] = warnings
     return summary

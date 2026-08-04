@@ -63,3 +63,7 @@ scripts/_analyze_*.py
 
 # processed CSV는 커밋 가능 (원본 xlsx는 제외)
 !data/processed/
+
+# 로컬 SQLite (Supabase 폴백)
+data/local/
+*.db

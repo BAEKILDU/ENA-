@@ -8,6 +8,7 @@ import streamlit as st
 from utils import config  # noqa: F401  — .env 로드
 from utils.components import navigate_to, render_sidebar_header, render_sidebar_nav
 from utils.theme import GLOBAL_CSS
+from data import local_db
 from views import (
     admin,
     analysis_result,
@@ -27,6 +28,7 @@ st.set_page_config(
 )
 
 st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
+local_db.init_schema()  # SQL Editor 없이 로컬 스키마 자동 준비
 
 # ── 네비게이션 ─────────────────────────────────────────────────────────────────
 PAGES = {
@@ -67,17 +69,20 @@ with st.sidebar:
         st.session_state["current_page"] = page_key
 
     st.divider()
-    st.caption("ENA 가치+ · v0.8")
-    st.caption("작성: 콘텐츠제작센터")
-    st.markdown("")
+    st.markdown(
+        '<div class="ena-sidebar-section">관리자 액션</div>',
+        unsafe_allow_html=True,
+    )
+    st.caption("자료 업로드 · 자동 분류 · DB 반영")
     if st.button(
-        "관리자 페이지",
+        "관리자 액션",
         key="sidebar_admin_btn",
         use_container_width=True,
         type="primary" if current == "admin" else "secondary",
     ):
-        if current != "admin":
-            navigate_to("admin")
+        navigate_to("admin")
+    st.caption("ENA 가치+ · v0.9")
+    st.caption("작성: 콘텐츠제작센터")
 
 # ── 페이지 렌더 ────────────────────────────────────────────────────────────────
 PAGES[st.session_state["current_page"]][1].render()

@@ -9,7 +9,7 @@ from typing import Any
 
 import pandas as pd
 
-from data.supabase_upload import get_supabase_client, replace_and_upload
+from data.supabase_upload import upload_table
 
 RANKING_SHEETS = {"유료방송가입가구", "개인"}
 COMPETITION_SUFFIX = "경쟁채널시청률"
@@ -418,7 +418,15 @@ def upload_nielsen_file(
     if dry_run:
         return summary
 
-    client = get_supabase_client()
+    backends: set[str] = set()
+    warnings: list[str] = []
     for table, rows in tables.items():
-        summary["uploaded"][table] = replace_and_upload(client, table, report_date, rows)
+        result = upload_table(table, report_date, rows)
+        summary["uploaded"][table] = result["uploaded"]
+        backends.add(result.get("backend") or "none")
+        if result.get("warning"):
+            warnings.append(str(result["warning"]))
+    summary["backend"] = ",".join(sorted(backends))
+    if warnings:
+        summary["warnings"] = warnings
     return summary

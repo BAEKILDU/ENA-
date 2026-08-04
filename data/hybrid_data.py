@@ -12,6 +12,7 @@ import pandas as pd
 
 from data import analysis_engine as engine
 from data import nielsen as nd
+from data import local_db
 from data import original_content as oc
 
 PREFERRED_TARGET = "개인2049"
@@ -175,6 +176,62 @@ def get_original_variety_shows() -> list[dict]:
     shows: list[dict] = []
     for item in catalog:
         rating = float(item.get("rating") or 0)
+        # 목표만 있는 기획 행은 시청률 0으로 두고 target_rating만 사용
+        has_actual = item.get("rating") is not None or item.get("revenue_million") is not None
+        metrics = _metrics_from_rating(rating if has_actual else 0)
+        rev = item.get("revenue_million")
+        if rev is not None:
+            metrics["revenue_million"] = round(float(rev), 2)
+            metrics["target_revenue_million"] = max(40, int(float(rev) * 0.85))
+            metrics["revenue_source"] = "original_capex"
+        else:
+            metrics["revenue_million"] = 0
+            metrics["target_revenue_million"] = 0
+            metrics["revenue_source"] = "none"
+        tgt = item.get("target_rating")
+        if tgt is not None and not (isinstance(tgt, float) and pd.isna(tgt)):
+            metrics["target_rating"] = round(float(tgt), 4)
+        if not has_actual and rating == 0 and item.get("rating") is None:
+            metrics["rating"] = round(float(tgt or 0), 4) if tgt is not None else 0.0
+        title = str(item["program_name"])
+        ep = item.get("episodes")
+        try:
+            weeks = int(ep) if ep is not None and not (isinstance(ep, float) and pd.isna(ep)) else 1
+        except (TypeError, ValueError):
+            weeks = 1
+        day = item.get("day") or "-"
+        time = item.get("time") or "-"
+        slot = item.get("slot") or (f"{day} {time}" if day != "-" and time != "-" else "-")
+        status = "방송중" if item.get("rating") or item.get("revenue_million") else "목표/기획"
+        shows.append(
+            {
+                "id": _stable_id("org", title),
+                "title": title,
+                "genre": _infer_genre(title),
+                "slot": slot,
+                "day": day,
+                "time": time,
+                "status": status,
+                "cast": ["오리지널 콘텐츠"],
+                "weeks_on_air": weeks,
+                "channel": item.get("channel") or "ENA",
+                "data_source": "original_content",
+                "report_date": item.get("report_date"),
+                "start_time": None,
+                "share": None,
+                "category": "예능",
+                **metrics,
+            }
+        )
+    return shows
+
+
+def get_original_drama_shows() -> list[dict]:
+    """오리지널 드라마 summary."""
+    catalog = oc.fetch_program_catalog(category="드라마")
+    shows: list[dict] = []
+    for item in catalog:
+        rating = float(item.get("rating") or 0)
         metrics = _metrics_from_rating(rating)
         rev = item.get("revenue_million")
         if rev is not None:
@@ -189,12 +246,12 @@ def get_original_variety_shows() -> list[dict]:
             weeks = 1
         shows.append(
             {
-                "id": _stable_id("org", title),
+                "id": _stable_id("orgd", title),
                 "title": title,
-                "genre": _infer_genre(title),
-                "slot": "-",
-                "day": "-",
-                "time": "-",
+                "genre": "드라마",
+                "slot": item.get("slot") or "-",
+                "day": item.get("day") or "-",
+                "time": item.get("time") or "-",
                 "status": "방송중",
                 "cast": ["오리지널 콘텐츠"],
                 "weeks_on_air": weeks,
@@ -203,10 +260,48 @@ def get_original_variety_shows() -> list[dict]:
                 "report_date": item.get("report_date"),
                 "start_time": None,
                 "share": None,
+                "category": "드라마",
                 **metrics,
             }
         )
     return shows
+
+
+def get_content_catalog() -> list[dict]:
+    """홈용: 예능+드라마 오리지널(+닐슨 예능)."""
+    by_key: dict[str, dict] = {}
+    for s in get_original_drama_shows() + get_variety_catalog():
+        key = f"{s.get('category')}:{str(s.get('title') or '').replace(' ', '').upper()}"
+        by_key[key] = s
+    catalog = list(by_key.values())
+    catalog = _apply_admin_target_ratings(catalog)
+    catalog = _apply_admin_exclusions(catalog)
+    catalog.sort(key=lambda s: -float(s.get("rating") or 0))
+    return catalog
+
+
+def _apply_admin_target_ratings(shows: list[dict]) -> list[dict]:
+    """관리자에서 입력한 목표 시청률을 각 프로그램에 반영."""
+    targets = local_db.load_target_ratings_map()
+    if not targets or not shows:
+        return shows
+    for show in shows:
+        matched = local_db.match_target_rating(str(show.get("title") or ""), targets)
+        if matched is not None:
+            show["target_rating"] = round(float(matched), 4)
+    return shows
+
+
+def _apply_admin_exclusions(shows: list[dict]) -> list[dict]:
+    """관리자에서 제외한 타이틀을 카탈로그에서 제거."""
+    excluded = local_db.list_excluded_titles()
+    if not excluded or not shows:
+        return shows
+    return [
+        s
+        for s in shows
+        if not local_db.is_title_excluded(str(s.get("title") or ""), excluded)
+    ]
 
 
 def get_variety_catalog() -> list[dict]:
@@ -234,6 +329,8 @@ def get_variety_catalog() -> list[dict]:
             existing["target_revenue_million"] = s["target_revenue_million"]
             existing["revenue_source"] = "original_capex"
     catalog = list(by_key.values())
+    catalog = _apply_admin_target_ratings(catalog)
+    catalog = _apply_admin_exclusions(catalog)
     catalog.sort(key=lambda s: -float(s.get("rating") or 0))
     return catalog
 

@@ -1,9 +1,9 @@
 """메인 홈 대시보드."""
 
+import pandas as pd
 import streamlit as st
 
-from data.hybrid_data import get_ena_variety_df, get_weekly_summary
-from utils.format import format_revenue_won
+from data.hybrid_data import get_content_catalog, get_ena_variety_df, get_weekly_summary
 from utils.charts import bar_chart, grouped_bar_chart
 from utils.components import (
     render_action_card,
@@ -12,6 +12,7 @@ from utils.components import (
     render_section_title,
     render_summary_box,
 )
+from utils.format import format_revenue_won
 from utils.theme import COLORS
 
 
@@ -53,36 +54,53 @@ def render() -> None:
     _render_home_hero()
 
     summary_data = get_weekly_summary()
-    df = get_ena_variety_df().sort_values("rating", ascending=False)
+    variety_df = get_ena_variety_df().sort_values("rating", ascending=False)
+    all_df = pd.DataFrame(get_content_catalog())
+    if not all_df.empty and "rating" in all_df.columns:
+        all_df = all_df.sort_values("rating", ascending=False)
+
+    drama_n = 0
+    total_capex = float(summary_data.get("total_revenue") or 0)
+    if not all_df.empty and "category" in all_df.columns:
+        drama_n = int((all_df["category"] == "드라마").sum())
+        if "revenue_million" in all_df.columns:
+            total_capex = float(all_df["revenue_million"].fillna(0).sum())
+
+    variety_n = len(variety_df)
+    df = all_df if not all_df.empty else variety_df
+    top_title = summary_data["top_title"]
+    top_rating = summary_data["top_rating"]
+    if not df.empty and "rating" in df.columns and df["rating"].notna().any():
+        top_row = df.loc[df["rating"].idxmax()]
+        top_title = top_row["title"]
+        top_rating = float(top_row["rating"])
 
     render_summary_box(
-        f"이번 주 ENA 콘텐츠 {len(df)}편 기준, "
-        f"평균 시청률 {summary_data['avg_rating']}% · "
-        f"최고 성과 '{summary_data['top_title']}' ({summary_data['top_rating']}%) · "
-        f"상승 트렌드 {summary_data['rising_count']}편 · "
-        f"누적 부가매출 약 {format_revenue_won(summary_data['total_revenue'])}. "
-        f"닐슨 실데이터 {summary_data.get('nielsen_count', 0)}편"
+        f"오리지널 콘텐츠 드라마 {drama_n}편 · 예능 {variety_n}편 기준, "
+        f"최고 성과 '{top_title}' ({top_rating}%) · "
+        f"누적 CAPEX 약 {format_revenue_won(total_capex)}. "
+        "사이드바 관리자 액션에서 자료를 업로드하면 자동 분류·반영됩니다."
         + (f" · 기준일 {summary_data['report_date']}" if summary_data.get("report_date") else "")
-        + "."
     )
 
     render_metric_cards(
         [
-            {"label": "방송 중 예능", "value": f"{len(df)}편"},
-            {"label": "평균 시청률", "value": f"{summary_data['avg_rating']}%"},
-            {"label": "최고 시청률", "value": f"{summary_data['top_rating']}%"},
-            {"label": "누적 부가매출", "value": format_revenue_won(summary_data["total_revenue"])},
+            {"label": "드라마", "value": f"{drama_n}편"},
+            {"label": "예능", "value": f"{variety_n}편"},
+            {"label": "최고 시청률", "value": f"{top_rating}%"},
+            {"label": "누적 CAPEX", "value": format_revenue_won(total_capex)},
         ]
     )
 
     if df.empty:
-        st.info("표시할 닐슨 예능 데이터가 없습니다. 관리자 페이지에서 닐슨 데이터를 업로드하거나 Supabase 연결을 확인하세요.")
+        st.info("표시할 데이터가 없습니다. 사이드바 **관리자 액션**에서 오리지널 콘텐츠 관리 엑셀을 업로드하세요.")
     else:
+        chart_df = df.dropna(subset=["rating"]) if "rating" in df.columns else df
         render_section_title("프로그램별 성과 (막대 그래프)")
         st.plotly_chart(
             bar_chart(
-                x=df["title"].tolist(),
-                y=df["rating"].tolist(),
+                x=chart_df["title"].tolist(),
+                y=chart_df["rating"].tolist(),
                 title="",
                 y_title="시청률 (%)",
                 text_template="%{y}%",
@@ -94,10 +112,10 @@ def render() -> None:
         render_section_title("시청률 · 화제성 비교")
         st.plotly_chart(
             grouped_bar_chart(
-                categories=df["title"].tolist(),
+                categories=chart_df["title"].tolist(),
                 series={
-                    "시청률(%)": df["rating"].tolist(),
-                    "화제성(점)": df["buzz_index"].tolist(),
+                    "시청률(%)": chart_df["rating"].tolist(),
+                    "화제성(점)": chart_df["buzz_index"].tolist(),
                 },
                 title="",
                 y_title="지표",
@@ -109,13 +127,13 @@ def render() -> None:
     c1, c2, c3 = st.columns(3, gap="large")
     with c1:
         render_content_card(
-            "닐슨 채널 시청률",
+            "관리자 액션",
             items=[
-                "01. Supabase 실데이터 채널 순위",
-                "02. ENA 프로그램·동시간 경쟁 비교",
-                "03. 타깃별 시청률 상세",
+                "01. 오리지널 콘텐츠 관리 엑셀 자동 분류",
+                "02. 닐슨 시청률 · 매출 CAPEX 업로드",
+                "03. Supabase 적재 및 대시보드 즉시 반영",
             ],
-            highlight="실데이터 연동 완료",
+            highlight="사이드바에서 이동",
             highlight_color=COLORS["cyan"],
             accent=COLORS["cyan"],
         )
@@ -127,7 +145,7 @@ def render() -> None:
                 "02. 시청률·화제성 기준 상·하위 그룹 분류",
                 "03. 주/월/연 단위 트렌드 및 가치 매트릭스",
             ],
-            highlight="닐슨 실데이터",
+            highlight="오리지널+닐슨",
             highlight_color=COLORS["magenta"],
             accent=COLORS["magenta"],
         )
@@ -139,28 +157,21 @@ def render() -> None:
                 "02. 출연진·편성·동시간 경쟁 10점 만점 지표",
                 "03. 유사 콘텐츠 벤치마크 및 부가 가치 제안",
             ],
-            highlight="닐슨 경쟁 실데이터 반영",
+            highlight="경쟁 실데이터 반영",
             highlight_color=COLORS["purple"],
             accent=COLORS["purple"],
         )
 
     render_section_title("빠른 이동")
-    ac1, ac2, ac3 = st.columns(3, gap="large")
+    ac1, ac2 = st.columns(2, gap="large")
     with ac1:
-        render_action_card(
-            "닐슨 채널 시청률",
-            "업로드된 닐슨 실데이터로 채널 순위·ENA 프로그램·타깃 상세를 확인합니다.",
-            "go_nielsen",
-            "nielsen_ratings",
-        )
-    with ac2:
         render_action_card(
             "예능 콘텐츠 분석",
             "방송 중 ENA 예능의 동시간대 경쟁 비교, 상·하위 분류, 트렌드 분석을 확인합니다.",
             "go_variety",
             "variety",
         )
-    with ac3:
+    with ac2:
         render_action_card(
             "신규 콘텐츠 분석",
             "기획안 업로드 · 10점 만점 경쟁력 분석 · 부가 가치 수익 제안을 확인합니다.",
@@ -168,4 +179,4 @@ def render() -> None:
             "new_content",
         )
 
-    st.caption("※ 예능/신규 기획/닐슨 채널 시청률: Supabase 닐슨 실데이터")
+    st.caption("※ 관리자 액션(사이드바)에서 자료 업로드 → 홈/예능 대시보드 반영")

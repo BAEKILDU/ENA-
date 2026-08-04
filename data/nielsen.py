@@ -1,4 +1,4 @@
-"""Supabase 닐슨 채널시청률 조회."""
+"""닐슨 채널시청률 조회 — Supabase 우선, 실패 시 로컬 SQLite."""
 
 from __future__ import annotations
 
@@ -9,50 +9,68 @@ import pandas as pd
 import streamlit as st
 from supabase import Client, create_client
 
+from data import local_db
+from data.supabase_upload import check_supabase_dns, supabase_reachable
 from utils.config import get_supabase_anon_key, get_supabase_url
 
 PAGE_SIZE = 1000
 
 
 @lru_cache(maxsize=1)
-def _client() -> Client:
+def _client() -> Client | None:
+    if not supabase_reachable():
+        return None
     url = get_supabase_url()
     key = get_supabase_anon_key()
     if not url or not key:
-        raise RuntimeError("SUPABASE_URL / SUPABASE_ANON_KEY 가 .env 에 없습니다.")
+        return None
     return create_client(url, key)
 
 
 def supabase_ready() -> bool:
-    return bool(get_supabase_url() and get_supabase_anon_key())
+    """데이터가 조회 가능한 백엔드가 있으면 True (로컬 포함)."""
+    local_db.init_schema()
+    return True
+
+
+def active_backend() -> str:
+    return "supabase" if supabase_reachable() else "local"
 
 
 def _fetch_all(table: str, filters: dict[str, Any] | None = None) -> list[dict]:
     client = _client()
-    rows: list[dict] = []
-    start = 0
-    while True:
-        q = client.table(table).select("*")
-        if filters:
-            for col, val in filters.items():
-                if val is None:
-                    continue
-                if isinstance(val, (list, tuple, set)):
-                    q = q.in_(col, list(val))
-                else:
-                    q = q.eq(col, val)
-        resp = q.range(start, start + PAGE_SIZE - 1).execute()
-        batch = resp.data or []
-        rows.extend(batch)
-        if len(batch) < PAGE_SIZE:
-            break
-        start += PAGE_SIZE
-    return rows
+    if client is not None:
+        try:
+            rows: list[dict] = []
+            start = 0
+            while True:
+                q = client.table(table).select("*")
+                if filters:
+                    for col, val in filters.items():
+                        if val is None:
+                            continue
+                        if isinstance(val, (list, tuple, set)):
+                            q = q.in_(col, list(val))
+                        else:
+                            q = q.eq(col, val)
+                resp = q.range(start, start + PAGE_SIZE - 1).execute()
+                batch = resp.data or []
+                rows.extend(batch)
+                if len(batch) < PAGE_SIZE:
+                    break
+                start += PAGE_SIZE
+            if rows:
+                return rows
+        except Exception:  # noqa: BLE001
+            pass
+    return local_db.fetch_all_local(table, filters)
 
 
 @st.cache_data(ttl=300, show_spinner=False)
 def get_report_dates() -> list[str]:
     rows = _fetch_all("nielsen_channel_rankings")
+    if not rows:
+        rows = _fetch_all("nielsen_competition_ratings")
     dates = sorted({r["report_date"] for r in rows if r.get("report_date")}, reverse=True)
     return dates
 
@@ -78,6 +96,8 @@ def get_competition_ratings(report_date: str) -> pd.DataFrame:
     for col in ("rating", "share"):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+    if "is_daily_total" in df.columns:
+        df["is_daily_total"] = df["is_daily_total"].astype(bool)
     return df
 
 
@@ -90,6 +110,8 @@ def get_target_details(report_date: str) -> pd.DataFrame:
     for col in ("rating", "share", "reach", "watch_time_ratio"):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+    if "is_daily_total" in df.columns:
+        df["is_daily_total"] = df["is_daily_total"].astype(bool)
     return df
 
 
@@ -165,7 +187,6 @@ def same_slot_competitors(
     start_time: str,
     focus_channel: str = "ENA",
 ) -> pd.DataFrame:
-    """동일 시작시간대 경쟁 채널 프로그램 비교."""
     if df.empty:
         return df
     q = df[
@@ -195,3 +216,10 @@ def target_breakdown(
         q = q[q["start_time"] == start_time]
     q = q[~q["is_daily_total"].fillna(False)]
     return q.sort_values("rating", ascending=False)
+
+
+def connection_hint() -> str:
+    ok, msg = check_supabase_dns()
+    if ok:
+        return "Supabase 연결 가능"
+    return f"로컬 DB 사용 중 — {msg}"

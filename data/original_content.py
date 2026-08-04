@@ -17,7 +17,18 @@ def _read_csv(name: str) -> pd.DataFrame:
     path = PROCESSED / f"{name}.csv"
     if not path.exists():
         return pd.DataFrame()
-    return pd.read_csv(path)
+    # 손상/비텍스트 파일·인코딩 차이 방어
+    raw = path.read_bytes()[:8]
+    if raw.startswith(b"SCDSA") or b"\x00" in raw:
+        return pd.DataFrame()
+    for enc in ("utf-8-sig", "utf-8", "cp949", "euc-kr"):
+        try:
+            return pd.read_csv(path, encoding=enc)
+        except UnicodeDecodeError:
+            continue
+        except Exception:  # noqa: BLE001
+            break
+    return pd.DataFrame()
 
 
 def load_programs_summary() -> pd.DataFrame:
@@ -106,26 +117,26 @@ def fetch_revenue_map() -> dict[str, float]:
 
 
 def fetch_program_catalog(category: str | None = None) -> list[dict[str, Any]]:
-    """홈/예능/드라마용 프로그램 카탈로그."""
-    client = _supabase_client()
+    """홈/예능/드라마용 프로그램 카탈로그. CSV 우선(업로드 즉시 반영), Supabase 보조."""
     rows: list[dict] = []
-    if client is not None:
-        try:
-            q = client.table("original_programs").select("*").order("report_date", desc=True)
-            if category:
-                q = q.eq("category", category)
-            res = q.limit(200).execute()
-            rows = res.data or []
-        except Exception:  # noqa: BLE001
-            rows = []
+    df = load_programs_summary()
+    if not df.empty:
+        if category:
+            df = df[df["category"] == category]
+        rows = df.to_dict(orient="records")
 
     if not rows:
-        df = load_programs_summary()
-        if category and not df.empty:
-            df = df[df["category"] == category]
-        rows = df.to_dict(orient="records") if not df.empty else []
+        client = _supabase_client()
+        if client is not None:
+            try:
+                q = client.table("original_programs").select("*").order("report_date", desc=True)
+                if category:
+                    q = q.eq("category", category)
+                res = q.limit(200).execute()
+                rows = res.data or []
+            except Exception:  # noqa: BLE001
+                rows = []
 
-    # 최신 일자만 · 프로그램 중복 제거
     seen: set[str] = set()
     catalog: list[dict[str, Any]] = []
     for r in rows:
@@ -135,6 +146,7 @@ def fetch_program_catalog(category: str | None = None) -> list[dict[str, Any]]:
         seen.add(name)
         rating = r.get("rating_target_p2049")
         capex = r.get("capex_million")
+        target_rating = r.get("target_rating")
         catalog.append(
             {
                 "program_name": name,
@@ -142,9 +154,17 @@ def fetch_program_catalog(category: str | None = None) -> list[dict[str, Any]]:
                 "episodes": r.get("episodes"),
                 "rating": float(rating) if rating is not None and not pd.isna(rating) else None,
                 "rating_household": r.get("rating_household"),
+                "target_rating": (
+                    float(target_rating)
+                    if target_rating is not None and not pd.isna(target_rating)
+                    else None
+                ),
                 "revenue_million": float(capex) if capex is not None and not pd.isna(capex) else None,
                 "channel": r.get("channel") or "ENA",
                 "note": r.get("note"),
+                "slot": r.get("slot"),
+                "day": r.get("day"),
+                "time": r.get("time"),
                 "report_date": r.get("report_date"),
                 "data_source": "original_content",
             }
