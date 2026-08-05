@@ -131,6 +131,18 @@ CREATE TABLE IF NOT EXISTS fundex_buzz_rankings (
   source TEXT DEFAULT 'fundex',
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS program_buzz_inputs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  program_name TEXT NOT NULL UNIQUE,
+  category TEXT,
+  naver_index REAL,
+  gooddata_index REAL,
+  article_count REAL,
+  community_score REAL,
+  note TEXT,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -345,6 +357,101 @@ def match_admin_targets(
         kk = _norm_title(k)
         if norm == kk or norm in kk or kk in norm:
             return v
+    return None
+
+
+def upsert_buzz_inputs(rows: list[dict[str, Any]]) -> int:
+    init_schema()
+    if not rows:
+        return 0
+    with connect() as conn:
+        for r in rows:
+            conn.execute(
+                """
+                INSERT INTO program_buzz_inputs (
+                  program_name, category, naver_index, gooddata_index,
+                  article_count, community_score, note, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(program_name) DO UPDATE SET
+                  category=excluded.category,
+                  naver_index=excluded.naver_index,
+                  gooddata_index=excluded.gooddata_index,
+                  article_count=excluded.article_count,
+                  community_score=excluded.community_score,
+                  note=excluded.note,
+                  updated_at=CURRENT_TIMESTAMP
+                """,
+                (
+                    r.get("program_name"),
+                    r.get("category"),
+                    r.get("naver_index"),
+                    r.get("gooddata_index"),
+                    r.get("article_count"),
+                    r.get("community_score"),
+                    r.get("note"),
+                ),
+            )
+        conn.commit()
+    return len(rows)
+
+
+def list_buzz_inputs() -> list[dict[str, Any]]:
+    init_schema()
+    with connect() as conn:
+        cur = conn.execute(
+            """
+            SELECT program_name, category, naver_index, gooddata_index,
+                   article_count, community_score, note, updated_at
+            FROM program_buzz_inputs
+            ORDER BY updated_at DESC, program_name
+            """
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+
+def load_buzz_inputs_map() -> dict[str, dict[str, Any]]:
+    """프로그램명 → 화제성 구성 지표."""
+    out: dict[str, dict[str, Any]] = {}
+    for row in list_buzz_inputs():
+        name = str(row.get("program_name") or "").strip()
+        if not name:
+            continue
+        out[name] = {
+            "naver_index": row.get("naver_index"),
+            "gooddata_index": row.get("gooddata_index"),
+            "article_count": row.get("article_count"),
+            "community_score": row.get("community_score"),
+            "category": row.get("category"),
+        }
+    return out
+
+
+def lookup_fundex_buzz_share(program_name: str) -> float | None:
+    """로컬 fundex_buzz_rankings 에서 화제성 점유율 조회."""
+    init_schema()
+    name = str(program_name or "").strip()
+    if not name:
+        return None
+    with connect() as conn:
+        cur = conn.execute(
+            """
+            SELECT program_name, buzz_share FROM fundex_buzz_rankings
+            WHERE buzz_share IS NOT NULL
+            ORDER BY created_at DESC
+            """
+        )
+        rows = cur.fetchall()
+    if not rows:
+        return None
+    norm = _norm_title(name)
+    for row in rows:
+        kk = _norm_title(str(row["program_name"]))
+        if norm == kk or norm in kk or kk in norm:
+            try:
+                return float(row["buzz_share"])
+            except (TypeError, ValueError):
+                return None
     return None
 
 

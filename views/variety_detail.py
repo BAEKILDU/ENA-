@@ -2,19 +2,77 @@
 
 import streamlit as st
 
+from data.buzz_engine import BUZZ_WEIGHTS, COMPONENT_LABELS
 from data.hybrid_data import (
+    get_buzz_breakdown,
     get_competition_data,
     get_ena_variety_df,
     get_trend_data,
     get_variety_catalog,
 )
-from utils.format import format_rating, format_revenue_won
 from utils.charts import bar_chart, grouped_bar_chart
 from utils.components import navigate_to, render_page_header, render_section_title, render_summary_box
+from utils.format import format_rating, format_revenue_won
+
+
+def _render_buzz_breakdown(title: str, rating: float, catalog_show: dict) -> None:
+    render_section_title("화제성 점수 산정 내역")
+    breakdown = catalog_show.get("buzz_breakdown")
+    if not isinstance(breakdown, dict):
+        breakdown = get_buzz_breakdown(title, rating)
+
+    method = breakdown.get("method")
+    method_label = (
+        "종합 산정 (네이버·굿데이터·기사량·커뮤니티)"
+        if method == "composite"
+        else "시청률 기반 추정 (구성 지표 미입력)"
+    )
+    st.caption(f"산정 방식: **{method_label}** · 종합 점수 **{breakdown.get('buzz_index')}점**")
+    st.code(str(breakdown.get("formula") or ""), language=None)
+    if breakdown.get("note"):
+        st.caption(str(breakdown["note"]))
+
+    rows = []
+    for c in breakdown.get("components") or []:
+        rows.append(
+            {
+                "구성 지표": c.get("label"),
+                "원본값": c.get("raw"),
+                "정규화(0~100)": c.get("normalized"),
+                "기본 가중치": f"{float(c.get('weight') or 0) * 100:.0f}%",
+                "적용 가중치": f"{float(c.get('weight_effective') or 0) * 100:.0f}%",
+                "기여 점수": c.get("contribution"),
+                "상태": c.get("status"),
+            }
+        )
+    if rows:
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+
+    st.caption(
+        "가중치 기준 — "
+        + " · ".join(f"{COMPONENT_LABELS[k]} {w * 100:.0f}%" for k, w in BUZZ_WEIGHTS.items())
+    )
+
+    contribs = [
+        c
+        for c in (breakdown.get("components") or [])
+        if c.get("normalized") is not None
+    ]
+    if contribs:
+        st.plotly_chart(
+            bar_chart(
+                x=[c["label"] for c in contribs],
+                y=[float(c["contribution"] or 0) for c in contribs],
+                title="",
+                y_title="기여 점수",
+                text_template="%{y:.1f}",
+            ),
+            use_container_width=True,
+        )
 
 
 def render() -> None:
-    render_page_header("예능 콘텐츠 상세 분석", "세부 지표 · 동시간대 경쟁 · 주/월/연 트렌드")
+    render_page_header("예능 콘텐츠 상세 분석", "세부 지표 · 화제성 산정 · 동시간대 경쟁 · 트렌드")
 
     df = get_ena_variety_df()
     catalog = get_variety_catalog()
@@ -50,6 +108,12 @@ def render() -> None:
     c2.metric("화제성", f"{metrics['buzz_index']}점")
     c3.metric("부가매출", format_revenue_won(metrics["revenue_million"]))
     c4.metric("출처", "닐슨")
+
+    _render_buzz_breakdown(
+        str(show["title"]),
+        float(metrics["rating"] or 0),
+        show,
+    )
 
     period = st.radio("트렌드 기간", ["주", "월", "연"], horizontal=True, key="detail_period")
     period_map = {"주": "week", "월": "month", "연": "year"}
@@ -95,10 +159,7 @@ def render() -> None:
         st.info("해당 시간대 경쟁 데이터가 없습니다.")
     else:
         highlight = {i for i, ena in enumerate(comp_df["is_ena"].tolist()) if ena}
-        labels = [
-            f"{r.channel} · {r.title}"
-            for r in comp_df.itertuples()
-        ]
+        labels = [f"{r.channel} · {r.title}" for r in comp_df.itertuples()]
         st.plotly_chart(
             bar_chart(
                 x=labels,

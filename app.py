@@ -29,6 +29,12 @@ st.set_page_config(
 
 st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 local_db.init_schema()  # SQL Editor 없이 로컬 스키마 자동 준비
+try:
+    from data.supabase_upload import sync_admin_metrics_from_supabase
+
+    sync_admin_metrics_from_supabase()  # 목표·화제성 지표 Supabase → 로컬
+except Exception:  # noqa: BLE001
+    pass
 
 # ── 네비게이션 ─────────────────────────────────────────────────────────────────
 PAGES = {

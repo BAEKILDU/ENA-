@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from data import analysis_engine as engine
+from data import buzz_engine
 from data import nielsen as nd
 from data import local_db
 from data import original_content as oc
@@ -268,13 +269,15 @@ def get_original_drama_shows() -> list[dict]:
 
 
 def get_content_catalog() -> list[dict]:
-    """홈용: 예능+드라마 오리지널(+닐슨 예능)."""
-    by_key: dict[str, dict] = {}
-    for s in get_original_drama_shows() + get_variety_catalog():
-        key = f"{s.get('category')}:{str(s.get('title') or '').replace(' ', '').upper()}"
-        by_key[key] = s
-    catalog = list(by_key.values())
+    """홈·성과 분석용: 예능 중심 카탈로그."""
+    return get_variety_catalog()
+
+
+def get_drama_comparison_catalog() -> list[dict]:
+    """비교군: 드라마 콘텐츠 (예능 성과 대비 참고용)."""
+    catalog = get_original_drama_shows()
     catalog = _apply_admin_target_ratings(catalog)
+    catalog = _apply_buzz_scores(catalog)
     catalog = _apply_admin_exclusions(catalog)
     catalog.sort(key=lambda s: -float(s.get("rating") or 0))
     return catalog
@@ -295,6 +298,31 @@ def _apply_admin_target_ratings(shows: list[dict]) -> list[dict]:
             show["target_buzz"] = int(round(float(matched["target_buzz"])))
         if matched.get("target_revenue_million") is not None:
             show["target_revenue_million"] = round(float(matched["target_revenue_million"]), 2)
+    return shows
+
+
+def _apply_buzz_scores(shows: list[dict]) -> list[dict]:
+    """네이버·굿데이터·기사량·커뮤니티 종합 화제성 점수 반영."""
+    if not shows:
+        return shows
+    inputs_map = local_db.load_buzz_inputs_map()
+    for show in shows:
+        title = str(show.get("title") or "")
+        inp = buzz_engine.match_buzz_inputs(title, inputs_map) or {}
+        gooddata = inp.get("gooddata_index")
+        if gooddata is None:
+            gooddata = local_db.lookup_fundex_buzz_share(title)
+        result = buzz_engine.compute_buzz_score(
+            naver_index=inp.get("naver_index"),
+            gooddata_index=gooddata,
+            article_count=inp.get("article_count"),
+            community_score=inp.get("community_score"),
+            rating=show.get("rating"),
+        )
+        show["buzz_index"] = int(result["buzz_index"])
+        show["buzz_breakdown"] = result
+        if show.get("target_buzz") is None:
+            show["target_buzz"] = max(30, int(result["buzz_index"]) - 8)
     return shows
 
 
@@ -336,9 +364,26 @@ def get_variety_catalog() -> list[dict]:
             existing["revenue_source"] = "original_capex"
     catalog = list(by_key.values())
     catalog = _apply_admin_target_ratings(catalog)
+    catalog = _apply_buzz_scores(catalog)
     catalog = _apply_admin_exclusions(catalog)
     catalog.sort(key=lambda s: -float(s.get("rating") or 0))
     return catalog
+
+
+def get_buzz_breakdown(title: str, rating: float | None = None) -> dict[str, Any]:
+    """타이틀별 화제성 세부 산정 내역."""
+    inputs_map = local_db.load_buzz_inputs_map()
+    inp = buzz_engine.match_buzz_inputs(title, inputs_map) or {}
+    gooddata = inp.get("gooddata_index")
+    if gooddata is None:
+        gooddata = local_db.lookup_fundex_buzz_share(title)
+    return buzz_engine.compute_buzz_score(
+        naver_index=inp.get("naver_index"),
+        gooddata_index=gooddata,
+        article_count=inp.get("article_count"),
+        community_score=inp.get("community_score"),
+        rating=rating,
+    )
 
 
 def get_ena_variety_df() -> pd.DataFrame:

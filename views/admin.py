@@ -12,7 +12,7 @@ import streamlit as st
 from data.nielsen_ingest import upload_nielsen_file
 from data.original_content_ingest import apply_original_workbook, detect_workbook_kind
 from data.revenue_ingest import build_revenue_template_bytes, upload_revenue_file
-from data.supabase_upload import storage_status
+from data.supabase_upload import push_program_buzz_inputs, push_program_targets, storage_status
 from data import local_db
 from utils.components import navigate_to, render_page_header, render_section_title
 
@@ -273,23 +273,33 @@ def _render_target_rating_editor() -> None:
         )
 
     if st.button("목표 저장 · 섹션 반영", type="primary", key="admin_target_save"):
-        local_db.upsert_target_ratings(
-            [
-                {
-                    "program_name": selected,
-                    "category": category,
-                    "target_rating": round(float(target_val), 3),
-                    "target_buzz": float(target_buzz),
-                    "target_revenue_million": round(float(target_rev_eok) * 100.0, 2),
-                    "note": "admin",
-                }
-            ]
-        )
+        payload = [
+            {
+                "program_name": selected,
+                "category": category,
+                "target_rating": round(float(target_val), 3),
+                "target_buzz": float(target_buzz),
+                "target_revenue_million": round(float(target_rev_eok) * 100.0, 2),
+                "note": "admin",
+            }
+        ]
+        local_db.upsert_target_ratings(payload)
+        sync = push_program_targets(payload)
         _clear_data_caches()
-        st.success(
+        backend = sync.get("backend") or "local"
+        msg = (
             f"'{selected}' 목표 시청률 {float(target_val):.3f}% · "
-            f"화제성 {int(target_buzz)}점 · 매출 {float(target_rev_eok):.2f}억원 저장 · 각 섹션에 반영됨"
+            f"화제성 {int(target_buzz)}점 · 매출 {float(target_rev_eok):.2f}억원 저장"
         )
+        if backend == "supabase":
+            st.success(f"{msg} · Supabase 동기화 완료 · 각 섹션에 반영됨")
+        else:
+            warn = sync.get("warning")
+            st.warning(
+                f"{msg} · 로컬 저장됨"
+                + (f" (Supabase 미동기화: {warn})" if warn else " (Supabase 미연결)")
+                + " · 각 섹션에 반영됨"
+            )
         st.rerun()
 
     rows = local_db.list_target_ratings()
@@ -359,6 +369,169 @@ def _render_title_exclusion_editor() -> None:
         st.caption(f"현재 제외 중: {', '.join(current)}")
 
 
+def _render_buzz_inputs_editor() -> None:
+    render_section_title("6. 화제성 구성 지표 입력")
+    st.caption(
+        "네이버 콘텐츠 화제성지수 · 굿데이터 화제성 지수 · 기사량 · 커뮤니티 반응을 입력하면 "
+        "종합 화제성 점수(가중 합산)로 산정되며, 예능 상세에서 세부 산정 내역을 확인할 수 있습니다. "
+        "가중치: 네이버 30% · 굿데이터 30% · 기사량 20% · 커뮤니티 20%."
+    )
+    local_db.init_schema()
+    titles = local_db.list_uploaded_program_titles()
+    saved = {r["program_name"]: r for r in local_db.list_buzz_inputs()}
+
+    if not titles:
+        st.info("먼저 위에서 오리지널/닐슨/매출 데이터를 업로드해 주세요.")
+        return
+
+    options = [t["program_name"] for t in titles]
+    title_meta = {t["program_name"]: t.get("category") or "" for t in titles}
+    selected = st.selectbox("타이틀 선택", options=options, key="admin_buzz_title")
+    current = saved.get(selected) or {}
+    raw_cat = str(current.get("category") or title_meta.get(selected) or "").strip()
+    category_options = ["예능", "드라마"]
+    default_cat = raw_cat if raw_cat in category_options else "예능"
+
+    def _f(key: str) -> float:
+        v = current.get(key)
+        return float(v) if v is not None else 0.0
+
+    c1, c2 = st.columns(2)
+    with c1:
+        naver = st.number_input(
+            "네이버 콘텐츠 화제성지수",
+            min_value=0.0,
+            max_value=1000.0,
+            value=_f("naver_index"),
+            step=0.1,
+            format="%.1f",
+            key="admin_buzz_naver",
+            help="0~100 또는 0~1000 스케일 모두 가능 (자동 정규화)",
+        )
+        articles = st.number_input(
+            "기사량 (건)",
+            min_value=0.0,
+            max_value=100000.0,
+            value=_f("article_count"),
+            step=1.0,
+            format="%.0f",
+            key="admin_buzz_articles",
+        )
+    with c2:
+        gooddata = st.number_input(
+            "굿데이터 화제성 지수",
+            min_value=0.0,
+            max_value=100.0,
+            value=_f("gooddata_index"),
+            step=0.1,
+            format="%.1f",
+            key="admin_buzz_gooddata",
+            help="굿데이터/Fundex 화제성 지수 또는 점유율(%)",
+        )
+        community = st.number_input(
+            "커뮤니티 반응 (0~100)",
+            min_value=0.0,
+            max_value=100.0,
+            value=_f("community_score"),
+            step=1.0,
+            format="%.0f",
+            key="admin_buzz_community",
+        )
+
+    category = st.selectbox(
+        "구분",
+        options=category_options,
+        index=category_options.index(default_cat),
+        key="admin_buzz_cat",
+    )
+
+    # 미리보기 (0은 미입력으로 간주)
+    from data.buzz_engine import compute_buzz_score
+
+    def _none_if_zero(v: float) -> float | None:
+        return None if float(v) == 0 else float(v)
+
+    preview = compute_buzz_score(
+        naver_index=_none_if_zero(naver),
+        gooddata_index=_none_if_zero(gooddata),
+        article_count=_none_if_zero(articles),
+        community_score=_none_if_zero(community),
+    )
+    st.info(f"미리보기 종합 화제성: **{preview['buzz_index']}점** — {preview['formula']}")
+
+    if st.button("화제성 지표 저장 · 섹션 반영", type="primary", key="admin_buzz_save"):
+        def _none_if_zero(v: float) -> float | None:
+            return None if float(v) == 0 else float(v)
+
+        payload_naver = _none_if_zero(naver)
+        payload_good = _none_if_zero(gooddata)
+        payload_art = _none_if_zero(articles)
+        payload_comm = _none_if_zero(community)
+        preview_saved = compute_buzz_score(
+            naver_index=payload_naver,
+            gooddata_index=payload_good,
+            article_count=payload_art,
+            community_score=payload_comm,
+        )
+        local_db.upsert_buzz_inputs(
+            [
+                {
+                    "program_name": selected,
+                    "category": category,
+                    "naver_index": payload_naver,
+                    "gooddata_index": payload_good,
+                    "article_count": payload_art,
+                    "community_score": payload_comm,
+                    "note": "admin",
+                }
+            ]
+        )
+        buzz_payload = [
+            {
+                "program_name": selected,
+                "category": category,
+                "naver_index": payload_naver,
+                "gooddata_index": payload_good,
+                "article_count": payload_art,
+                "community_score": payload_comm,
+                "note": "admin",
+            }
+        ]
+        sync = push_program_buzz_inputs(buzz_payload)
+        _clear_data_caches()
+        backend = sync.get("backend") or "local"
+        base = f"'{selected}' 화제성 지표 저장 · 종합 {preview_saved['buzz_index']}점"
+        if backend == "supabase":
+            st.success(f"{base} · Supabase 동기화 완료 · 각 섹션에 반영됨")
+        else:
+            warn = sync.get("warning")
+            st.warning(
+                f"{base} · 로컬 저장됨"
+                + (f" (Supabase 미동기화: {warn})" if warn else " (Supabase 미연결)")
+                + " · 각 섹션에 반영됨"
+            )
+        st.rerun()
+
+    rows = local_db.list_buzz_inputs()
+    if rows:
+        st.dataframe(
+            [
+                {
+                    "타이틀": r["program_name"],
+                    "구분": r.get("category") or "-",
+                    "네이버": r.get("naver_index"),
+                    "굿데이터": r.get("gooddata_index"),
+                    "기사량": r.get("article_count"),
+                    "커뮤니티": r.get("community_score"),
+                    "수정시각": r.get("updated_at"),
+                }
+                for r in rows
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
 def render() -> None:
     render_page_header("관리자 액션", "자료 업로드 → 자동 분류 → DB 적재 → 대시보드 반영")
     _render_storage_banner()
@@ -379,6 +552,9 @@ def render() -> None:
 
     with st.container(border=True):
         _render_title_exclusion_editor()
+
+    with st.container(border=True):
+        _render_buzz_inputs_editor()
 
     st.markdown("---")
     if st.button("← 홈으로 돌아가기", key="admin_back_home"):

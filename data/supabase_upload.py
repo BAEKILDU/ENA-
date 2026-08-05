@@ -131,3 +131,178 @@ def storage_status() -> dict[str, Any]:
         "local_db": str(local_db.db_path()),
         "schema_ready": True,
     }
+
+
+def _target_row_for_supabase(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "program_name": row.get("program_name"),
+        "category": row.get("category"),
+        "target_rating": row.get("target_rating"),
+        "target_buzz": row.get("target_buzz"),
+        "target_revenue_million": row.get("target_revenue_million"),
+        "note": row.get("note") or "admin",
+    }
+
+
+def push_program_targets(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """관리자 목표(시청률·화제성·매출)를 Supabase에 upsert. 실패 시 로컬만 유지."""
+    local_db.init_schema()
+    if not rows:
+        return {"uploaded": 0, "backend": "none"}
+
+    payload = [_target_row_for_supabase(r) for r in rows if r.get("program_name")]
+    if not payload:
+        return {"uploaded": 0, "backend": "none"}
+
+    if not supabase_reachable():
+        ok, msg = check_supabase_dns()
+        return {
+            "uploaded": 0,
+            "backend": "local",
+            "warning": None if ok else msg,
+        }
+
+    try:
+        client = get_supabase_client()
+        client.table("program_target_ratings").upsert(
+            payload,
+            on_conflict="program_name",
+        ).execute()
+        return {"uploaded": len(payload), "backend": "supabase"}
+    except Exception as exc:  # noqa: BLE001
+        return {"uploaded": 0, "backend": "local", "warning": str(exc)}
+
+
+def pull_program_targets_into_local() -> dict[str, Any]:
+    """Supabase 목표값을 로컬 DB에 동기화 (앱 재실행 시 동일 데이터 적용)."""
+    local_db.init_schema()
+    if not supabase_reachable():
+        return {"pulled": 0, "backend": "local"}
+
+    try:
+        client = get_supabase_client()
+        res = (
+            client.table("program_target_ratings")
+            .select(
+                "program_name,category,target_rating,target_buzz,target_revenue_million,note"
+            )
+            .execute()
+        )
+        rows = res.data or []
+        if not rows:
+            return {"pulled": 0, "backend": "supabase"}
+        local_db.upsert_target_ratings(
+            [
+                {
+                    "program_name": r.get("program_name"),
+                    "category": r.get("category"),
+                    "target_rating": r.get("target_rating"),
+                    "target_buzz": r.get("target_buzz"),
+                    "target_revenue_million": r.get("target_revenue_million"),
+                    "note": r.get("note") or "supabase",
+                }
+                for r in rows
+                if r.get("program_name")
+            ]
+        )
+        return {"pulled": len(rows), "backend": "supabase"}
+    except Exception as exc:  # noqa: BLE001
+        return {"pulled": 0, "backend": "local", "warning": str(exc)}
+
+
+def _buzz_row_for_supabase(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "program_name": row.get("program_name"),
+        "category": row.get("category"),
+        "naver_index": row.get("naver_index"),
+        "gooddata_index": row.get("gooddata_index"),
+        "article_count": row.get("article_count"),
+        "community_score": row.get("community_score"),
+        "note": row.get("note") or "admin",
+    }
+
+
+def push_program_buzz_inputs(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """화제성 구성 지표를 Supabase에 upsert."""
+    local_db.init_schema()
+    if not rows:
+        return {"uploaded": 0, "backend": "none"}
+
+    payload = [_buzz_row_for_supabase(r) for r in rows if r.get("program_name")]
+    if not payload:
+        return {"uploaded": 0, "backend": "none"}
+
+    if not supabase_reachable():
+        ok, msg = check_supabase_dns()
+        return {
+            "uploaded": 0,
+            "backend": "local",
+            "warning": None if ok else msg,
+        }
+
+    try:
+        client = get_supabase_client()
+        client.table("program_buzz_inputs").upsert(
+            payload,
+            on_conflict="program_name",
+        ).execute()
+        return {"uploaded": len(payload), "backend": "supabase"}
+    except Exception as exc:  # noqa: BLE001
+        return {"uploaded": 0, "backend": "local", "warning": str(exc)}
+
+
+def pull_program_buzz_inputs_into_local() -> dict[str, Any]:
+    """Supabase 화제성 지표를 로컬 DB에 동기화."""
+    local_db.init_schema()
+    if not supabase_reachable():
+        return {"pulled": 0, "backend": "local"}
+
+    try:
+        client = get_supabase_client()
+        res = (
+            client.table("program_buzz_inputs")
+            .select(
+                "program_name,category,naver_index,gooddata_index,"
+                "article_count,community_score,note"
+            )
+            .execute()
+        )
+        rows = res.data or []
+        if not rows:
+            return {"pulled": 0, "backend": "supabase"}
+        local_db.upsert_buzz_inputs(
+            [
+                {
+                    "program_name": r.get("program_name"),
+                    "category": r.get("category"),
+                    "naver_index": r.get("naver_index"),
+                    "gooddata_index": r.get("gooddata_index"),
+                    "article_count": r.get("article_count"),
+                    "community_score": r.get("community_score"),
+                    "note": r.get("note") or "supabase",
+                }
+                for r in rows
+                if r.get("program_name")
+            ]
+        )
+        return {"pulled": len(rows), "backend": "supabase"}
+    except Exception as exc:  # noqa: BLE001
+        return {"pulled": 0, "backend": "local", "warning": str(exc)}
+
+
+def sync_admin_metrics_from_supabase() -> dict[str, Any]:
+    """앱 시작 시 목표·화제성 지표를 Supabase에서 일괄 pull."""
+    targets = pull_program_targets_into_local()
+    buzz = pull_program_buzz_inputs_into_local()
+    return {"targets": targets, "buzz": buzz}
+
+
+def push_all_local_admin_metrics() -> dict[str, Any]:
+    """로컬에 저장된 목표·화제성 지표를 Supabase로 일괄 push."""
+    local_db.init_schema()
+    t_rows = local_db.list_target_ratings()
+    b_rows = local_db.list_buzz_inputs()
+    return {
+        "targets": push_program_targets(t_rows),
+        "buzz": push_program_buzz_inputs(b_rows),
+    }
