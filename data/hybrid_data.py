@@ -676,38 +676,41 @@ def get_goal_summary() -> dict:
 
 
 def _program_daily_ratings(title: str) -> pd.DataFrame:
-    """Supabase(로컬) 닐슨 경쟁표에서 프로그램별 일자 시청률(일별 최고)."""
+    """프로그램별 일자 시청률(일별 최고).
+
+    Cloud 타임아웃 방지를 위해 전체 테이블 일괄 로드 대신 리포트일별 조회.
+    """
     empty = pd.DataFrame(columns=["report_date", "rating"])
     try:
-        raw = nd.get_all_competition_ratings()
+        dates = nd.get_report_dates()
     except Exception:  # noqa: BLE001
         return empty
-    if raw.empty:
+    if not dates:
         return empty
 
-    mask = (
-        raw["sheet_name"].isin(VARIETY_SHEETS)
-        & (raw["target"] == PREFERRED_TARGET)
-        & (~raw["is_daily_total"].fillna(False))
-    )
-    comp = raw.loc[mask].copy()
-    if comp.empty:
-        return empty
+    records: list[dict[str, Any]] = []
+    for report_date in sorted(str(d)[:10] for d in dates):
+        try:
+            comp = _nielsen_competition_df(report_date)
+        except Exception:  # noqa: BLE001
+            continue
+        if comp.empty:
+            continue
+        hits = comp[comp["program_name"].astype(str).map(lambda t: _titles_match(t, title))]
+        if hits.empty:
+            continue
+        ena = hits[hits["channel_name"].isin(ENA_CHANNELS)]
+        pool = ena if not ena.empty else hits
+        records.append(
+            {
+                "report_date": report_date,
+                "rating": round(float(pool["rating"].max() or 0), 3),
+            }
+        )
 
-    hits = comp[comp["program_name"].astype(str).map(lambda t: _titles_match(t, title))]
-    if hits.empty:
+    if not records:
         return empty
-
-    ena = hits[hits["channel_name"].isin(ENA_CHANNELS)]
-    pool = ena if not ena.empty else hits
-    daily = (
-        pool.groupby("report_date", as_index=False)["rating"]
-        .max()
-        .sort_values("report_date")
-        .reset_index(drop=True)
-    )
-    daily["rating"] = daily["rating"].map(lambda v: round(float(v or 0), 3))
-    return daily
+    return pd.DataFrame(records).sort_values("report_date").reset_index(drop=True)
 
 
 def get_trend_data(show_id: str, period: str = "week") -> pd.DataFrame:

@@ -128,16 +128,25 @@ def render() -> None:
     trend_df = get_trend_data(show_id, period_map[period])
 
     render_section_title("시청률 추이")
-    st.plotly_chart(
-        bar_chart(
+    if trend_df is None or trend_df.empty or "rating" not in trend_df.columns:
+        st.info("선택한 콘텐츠의 닐슨 시청률 추이 데이터가 없습니다.")
+    else:
+        y_vals = [float(v) for v in trend_df["rating"].tolist()]
+        fig = bar_chart(
             x=trend_df["period"].tolist(),
-            y=trend_df["rating"].tolist(),
+            y=y_vals,
             title="",
             y_title="시청률 (%)",
             text_template="%{y:.3f}%",
-        ),
-        use_container_width=True,
-    )
+        )
+        y_max = max(y_vals) if y_vals else 1.0
+        fig.update_yaxes(rangemode="tozero", range=[0, y_max * 1.25])
+        if "avg_rating" in trend_df.columns:
+            st.caption(
+                f"콘텐츠 시청률 전체 평균 {format_rating(float(trend_df['avg_rating'].iloc[0]))} · "
+                f"닐슨 리포트일 실데이터"
+            )
+        st.plotly_chart(fig, use_container_width=True)
 
     render_section_title("가치 레이더")
     st.plotly_chart(

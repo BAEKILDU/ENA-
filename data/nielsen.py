@@ -53,7 +53,9 @@ def _fetch_all(table: str, filters: dict[str, Any] | None = None) -> list[dict]:
                             q = q.in_(col, list(val))
                         else:
                             q = q.eq(col, val)
-                resp = q.range(start, start + PAGE_SIZE - 1).execute()
+                # order 필수: 없으면 range 페이지네이션이 중복/누락되어 Cloud에서 시계열이 깨짐
+                q = q.order("id").range(start, start + PAGE_SIZE - 1)
+                resp = q.execute()
                 batch = resp.data or []
                 rows.extend(batch)
                 if len(batch) < PAGE_SIZE:
@@ -68,10 +70,37 @@ def _fetch_all(table: str, filters: dict[str, Any] | None = None) -> list[dict]:
 
 @st.cache_data(ttl=300, show_spinner=False)
 def get_report_dates() -> list[str]:
+    """리포트일 목록 (경쟁표 report_date만 조회해 Cloud 타임아웃 방지)."""
+    client = _client()
+    if client is not None:
+        try:
+            found: set[str] = set()
+            start = 0
+            while True:
+                resp = (
+                    client.table("nielsen_competition_ratings")
+                    .select("report_date")
+                    .order("id")
+                    .range(start, start + PAGE_SIZE - 1)
+                    .execute()
+                )
+                batch = resp.data or []
+                for r in batch:
+                    d = r.get("report_date")
+                    if d:
+                        found.add(str(d)[:10])
+                if len(batch) < PAGE_SIZE:
+                    break
+                start += PAGE_SIZE
+            if found:
+                return sorted(found, reverse=True)
+        except Exception:  # noqa: BLE001
+            pass
+
     rows = _fetch_all("nielsen_channel_rankings")
     if not rows:
         rows = _fetch_all("nielsen_competition_ratings")
-    dates = sorted({r["report_date"] for r in rows if r.get("report_date")}, reverse=True)
+    dates = sorted({str(r["report_date"])[:10] for r in rows if r.get("report_date")}, reverse=True)
     return dates
 
 
@@ -84,6 +113,21 @@ def get_channel_rankings(report_date: str) -> pd.DataFrame:
     for col in ("rating", "share", "reach", "rank"):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_competition_ratings(report_date: str) -> pd.DataFrame:
+    """특정 리포트일 경쟁 시청률."""
+    rows = _fetch_all("nielsen_competition_ratings", {"report_date": report_date})
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    for col in ("rating", "share"):
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    if "is_daily_total" in df.columns:
+        df["is_daily_total"] = df["is_daily_total"].astype(bool)
     return df
 
 
