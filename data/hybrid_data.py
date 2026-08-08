@@ -749,12 +749,9 @@ def get_trend_data(show_id: str, period: str = "week") -> pd.DataFrame:
     overall_avg = round(float(frame["rating"].mean()), 3)
 
     if period == "week":
-        # 업로드된 닐슨 리포트일 = 주차 포인트 (시간순 1주, 2주, …)
+        # 닐슨 리포트일 기준 — 일자만 표시
         ordered = frame.sort_values("dt").reset_index(drop=True)
-        labels = [
-            f"{i + 1}주({d.strftime('%m/%d')})"
-            for i, d in enumerate(ordered["dt"].tolist())
-        ]
+        labels = [d.strftime("%m/%d") for d in ordered["dt"].tolist()]
         values = [round(float(v), 3) for v in ordered["rating"].tolist()]
         counts = [1] * len(ordered)
     elif period == "month":
