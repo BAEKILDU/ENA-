@@ -1,0 +1,1701 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>펀덱스(FUNdex)</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="TV와 OTT의 K-콘텐츠와 출연자에 대한 화제성 조사 순위와 함께 프로그램의 재미를 계산하여 보고싶은 드라마와 예능 선택하는데 도움을드립니다">
+	<meta property="og:title" content="펀덱스(FUNdex)">
+	<meta property="og:description" content="펀덱스(FUNdex) - K콘텐츠와 출연자 화제성 조사 순위 발표
+    화제성 주간 순위  스페셜리포트  관련기사 데이터서비스  화제성분석  굿데이터코퍼레이션
+    펀덱스(FUNdex)에서는 TV와 OTT의 K-콘텐츠와 출연자에 대한 화제성 조사 순위와 함께 프로그램의 재미를 계산하여 보고싶은 드라마와 예능 선택하는데 도움을 드립니다.">
+	<meta property="og:image" content="https://www.fundex.co.kr/img/kakao-share2.png">
+	<meta property="og:url" content="https://www.fundex.co.kr">
+	
+    <title>GOODDATA Corp</title>
+	<script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+	<script type="text/javascript" src="https://code.jquery.com/ui/1.13.1/jquery-ui.js"></script>
+	<script type="text/javascript" src="/js/common.js?v=2"></script>
+	<script type="text/javascript" src="/js/utils.js?v=1"></script>
+
+
+    <link rel="stylesheet" href="css/reset.css?v=20">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <link href="https://getbootstrap.com/docs/5.3/assets/css/docs.css" rel="stylesheet">kakao-share2.png
+    <link rel="stylesheet" href="./css/renewStyle.css?ver=251009">
+
+    <!-- bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- chart -->
+    
+</head>
+<body id="mainCon">
+    <!-- <nav class="navbar navbar-expand-lg bg-body-tertiary header">
+        <div class="container-fluid inner">
+            <a class="navbar-brand" href="./fxmain.do">
+                <img class="goodData-logo" src="./img/logo.svg" alt="logo">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon">
+                    <div class="hamburger-bar"></div>
+                    <div class="hamburger-bar"></div>
+                    <div class="hamburger-bar"></div>
+                </span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="fxnews.do">관련기사</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" aria-current="page" href="spcreport.do">스페셜 리포트</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" aria-current="page" href="/">순위표</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" aria-current="page" href="dservice.do">데이터 서비스</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" aria-current="page" href="issuepower.do">화제성 분석</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" aria-current="page" href="company.do">회사소개</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav> -->
+    
+	<!--con_fundex -->
+	
+
+<style>
+	.fundex_desc {
+		color: #fff; font-size:9pt;margin-bottom:1px
+	}
+</style>
+ <!-- chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/html2canvas.min.js"></script>
+ <!-- share API -->
+	<script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+
+
+	<section class="mainVisual">
+        <div class="inner">
+			<div class="twoCol">
+                <div>
+                    <h2>FUNdex</h2>
+                    <h1><b>TV + OTT + STAR</b></h1>
+                    <div>
+                        <p>K-Content Online BuzzWorthiness</p>
+                        <p>Online Issue Power of K-Contents</p>
+                    </div>
+                    <div class="updateInfo">
+                        <div class="left">
+                            <p>#K-darama#K-show#K-star</p>
+                            <p>Last updated on <span class="update">July 28.2026.</span></p>
+							<!--<p style="font-size: 16pt; margin-top:8px;"><a style="color:#F5BE58;" href="award25.html" target="_new2938" >2025 펀덱스 어워드 수상 결과 발표</a></p>-->
+                            <!--<p ><a style="color:#ffffff;" href="https://www.banronbodo.com/news/articleView.html?idxno=30607" target="_new29380">[상반기 화제성 결산②] TV 시즌제 예능 vs OTT 예능의 주중 경쟁</a></p>-->
+                        
+						</div>
+                    </div>
+                </div>
+                
+                <div class="awardBanner">
+                    <!--
+					<div class="imgWrap">
+                        <a href="/award.html"><img src="./img/award/banner.jpg?v=1" alt="banner"></a>
+                       
+                    </div> -->
+				
+				<!--
+                    <a style="color:#f3ee4e;" href="https://www.youtube.com/watch?v=MGXZ4_JAcxc" target="_awa241">2024 펀덱스어워드 1부 영상 보기</a>
+                    <a style="color:#f3ee4e;" href="https://www.youtube.com/watch?v=hHBU_sfMlZc&t=1s" target="_awa241">2024 펀덱스어워드 2부 영상 보기</a>
+                 -->  
+					<!--<a style="color:#ffffff;" href="https://racoi.s3.ap-northeast-2.amazonaws.com/24%EB%85%84_%EA%B5%BF%EB%8D%B0%EC%9D%B4%ED%84%B0_%ED%8E%80%EB%8D%B1%EC%8A%A4_%EC%86%8C%EA%B0%9C%EC%9E%90%EB%A3%8C.pdf" target="_new2938">Download GOODDDATA Corporation Company Introduction 2024ver</a>-->
+					<!--<a style="color:#ffffff;" href="https://racoi.s3.ap-northeast-2.amazonaws.com/%5B%EA%B5%BF%EB%8D%B0%EC%9D%B4%ED%84%B0%5D+%ED%8E%80%EB%8D%B1%EC%8A%A4%EB%A6%AC%ED%8F%AC%ED%8A%B8_4%EC%9B%94+3%EC%A3%BC%EC%B0%A8.pdf" target="_new2938">FUNdex Report #583</a>-->
+					<!--<a style="color:#ffffff;" href="https://www.youtube.com/watch?v=3-p7GzwY3-o&t=2s" target="_new2938">Movie-FUNdex Platform(ENG)</a>-->
+            </div>
+		
+        </div>
+    </section>
+
+    <section class="mainCon" id="">
+        <div class="inner" id="main_g">
+            <div class="tabTitle">
+                <h1 id="page_title">TV-OTT ALL BuzzWorthiness</h1>
+                <div class="d-flex justify-content-end">
+                    <button type="button" class="btn download">download</button>
+                    <button type="button" class="btn share" data-bs-toggle="modal" data-bs-target="#share">share</button>
+                </div>
+            </div>
+            <ul class="nav nav-tabs tab innerFull" id="tab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link tabmenu active" id="tab1-tab" data-bs-toggle="tab" data-v="ott" data-bs-target="#tab1" type="button" role="tab" aria-controls="tab1" aria-selected="true">TV-OTT</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link tabmenu" id="tab2-tab" data-bs-toggle="tab" data-v="tv" data-bs-target="#tab1" type="button" role="tab" aria-controls="tab1" aria-selected="false">TV</button>
+                </li>
+                <!--<li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab3-tab" data-bs-toggle="tab" data-bs-target="#tab3" type="button" role="tab" aria-controls="tab3" aria-selected="false">OTT</button>
+                </li>-->
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link tabmenu" id="tab4-tab" data-bs-toggle="tab" data-v="topic" data-bs-target="#tab4" type="button" role="tab" aria-controls="tab4" aria-selected="false">Performers</button>
+                </li>
+            </ul>
+            
+<!-- tab view -->            
+            <div class="tab-content" id="tabContent">
+                <div class="tab-pane fade show active" id="tab1" role="tabpanel" aria-labelledby="tab1-tab">
+                    
+                    <!-- 타입필터 : ALL / DRAMA / NON-DRAMA -->
+                    <ul class="nav nav-tabs typeFilter" id="tab1TypeFilter" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link btn_cat_tab1 active" id="tab1TypeFilter1" data-v="all" data-bs-toggle="tab" type="button" role="tab" aria-selected="true">ALL</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link btn_cat_tab1" id="tab1TypeFilter2" data-v="cat001" data-bs-toggle="tab" type="button" role="tab" aria-selected="true">DRAMA</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link btn_cat_tab1" id="tab1TypeFilter3" data-v="cat002" data-bs-toggle="tab" type="button" role="tab" aria-selected="true">NON-DRAMA</button>
+                        </li>
+                        <div class="label">
+							<select id="idx_type">
+								<option value="oqpoint"> BuzzWorthiness(%)</option>
+								<option value="von_cnt"> Post(%)</option>
+								<option value="vid_cnt"> Clip Counts(%)</option>
+								<option value="vid_vc"> Clip View(%)</option>
+								<option value="n_cnt"> News(%)</option>
+							</select>
+                        </div>
+                    </ul>
+                    
+                <!-- program list display -->
+                    <div class="accordion innerFull" id="programlist_tab1">
+
+                    </div>
+                <!--// end project list -->
+                    
+                </div>
+        
+        
+                <div class="tab-pane fade" id="tab2" role="tabpanel" aria-labelledby="tab2-tab">
+                    <!-- 타입필터 : ALL / DRAMA / NON-DRAMA -->
+                        <ul class="nav nav-tabs typeFilter" id="tab1TypeFilter" role="tablist">
+                            <li class="nav-item" role="presentation">
+                            <button class="nav-link btn_cat_tab2 active" id="tab1TypeFilter11" data-v="all" data-bs-toggle="tab" type="button" role="tab" aria-selected="true">ALL</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link btn_cat_tab2" id="tab1TypeFilter22" data-v="cat001" data-bs-toggle="tab" type="button" role="tab" aria-selected="true">DRAMA</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link btn_cat_tab2" id="tab1TypeFilter33" data-v="cat002" data-bs-toggle="tab" type="button" role="tab" aria-selected="true">NON-DRAMA</button>
+                            </li>
+                            <div class="label" style='color:#fff'>
+                                BuzzWorthiness(%)
+                            </div>
+                        </ul>
+
+                    <!-- program list display -->
+                        <div class="accordion innerFull" id="programlist_tab2">
+                        </div>
+                    <!--// end project list -->
+                
+                </div>
+                <div class="tab-pane fade" id="tab3" role="tabpanel" aria-labelledby="tab3-tab">ㅁㅣ사용....</div>
+                <div class="tab-pane fade" id="tab4" role="tabpanel" aria-labelledby="tab4-tab">
+<!--// tab view -->
+                    
+                    <!-- 타입필터 : ALL / DRAMA / NON-DRAMA -->
+                    <ul class="nav nav-tabs typeFilter" id="tab4TypeFilter" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active btn_topic_tab" id="tab4TypeFilter1" data-v="all" data-bs-toggle="tab" type="button" role="tab" aria-selected="true">ALL</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link btn_topic_tab" id="tab4TypeFilter2" data-v="cat001" data-bs-toggle="tab" type="button" role="tab" aria-selected="true">DRAMA</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link btn_topic_tab" id="tab4TypeFilter3" data-v="cat002" data-bs-toggle="tab" type="button" role="tab" aria-selected="true">NON-DRAMA</button>
+                        </li>
+                        <div class="label" style='color:#fff'>
+                           BuzzWorthiness(%)
+                        </div>
+                    </ul>
+				
+				<!-- Performers -->
+                    <div class="accordion innerFull" id="actor_list">
+                        
+                        <div class="accordion-item">
+                          <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                <div class="rank">3.</div>
+                                <img class="thumbImg" src="https://search.pstatic.net/common?type=f&size=210x236&quality=90&direct=true&src=https%3A%2F%2Fcsearch-phinf.pstatic.net%2F20230322_269%2F1679451609375yrwjb_JPEG%2F60_main_image_new_1679451609363.jpg" alt="차주영">
+                                <div class="infoWrap">
+                                    <div class="tit">more 없는 타입</div>
+                                    <div class="subTit">Joo Young Cha</div>
+                                    <div class="value1">더 글로리 파트 2</div>
+                                    <div class="value2">The Gloay Part 2</div>
+                                </div>
+                                <div class="score">52.9%</div>
+                                <div class="hasLink">more</div>
+                            </button>
+                          </h2>
+                          <!-- .accordion-collapse 요소가 없으면 .hasLink(자세히보기) 는 display 되지 않도록 style 구성함 -->
+                        </div>
+                    </div>
+				<!--// Performers -->
+					
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <section class="mainAbout">
+        <div class="inner">
+            <div>조사소개 About Research</div>
+            <p class="text">
+			펀덱스(FUNdex)는
+				TV와 OTT의 K-콘텐츠와 출연자에 대한 화제성 조사 순위와 함께 프로그램의 재미를 계산하여 보고싶은 DRAMA와 예능 선택하는데 도움을 드립니다.<br>
+			
+                K-콘텐츠 경쟁력 분석 전문 기관인 굿데이터코퍼레이션이 발표한 화제성 순위는 TV, OTT에서 방송 또는 공개중이거나 예정인 DRAMA, 예능, 시사, 쇼와 이 프로그램에 출연한 출연자(PLAYER)를 대상으로 뉴스 기사, VON(블로그/커뮤니티/카페), 동영상, SNS에서 발생한 프로그램 관련 정보들과 이에 대한 네티즌 반응을 분석한 결과임.<br>
+                조사대상 Contents 채널 : 지상파, ALL편성, 케이블 39개사, OTT 5개사 프로그램 : TVDRAMA, TV예능,정보,시사, OTT 오리지널 DRAMA, OTT 오리지널 SHOW (뉴스, 스포츠 중계, 영화 등은 조사 대상에서 제외됨) 
+				<br>범위 : 국내 제작 또는 국내 기술 및 인력이 투입된 프로 그램에 한하여 조사됨.
+            </p>
+            <div>업데이트 Update</div>
+            <p class="text">
+			회원 대상 데이터 업데이트는 일간은 매일 18시에, 주간은 월요일 12시에 실시되며, 비회원 대상 주간 Top10 순위는 화요일 12시에 업데이트 됩니다.<br>
+            단 월요일이 휴일(공휴일)인 경우에는 주간 TOP10 순위는 수요일 12시에 업데이트 됩니다.
+            </p>
+            <div>문의연락 Contact us</div>
+            <a class="text" href="mailto:help@gooddata.co.kr">help@gooddata.co.kr</a>
+        </div>
+    </section>
+
+    
+<!-- 방송메타 > 피디/Scripter/Performers -->
+    <div class="offcanvas offcanvas-end fxChain1" tabindex="-1" id="fundex1" aria-labelledby="fundex1Label" >
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="fundex1Label">FUNdex Chain</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div class="title">
+                <div class="tit meta_title">더 글로리 파트2</div>
+                <div class="subTit meta_etitle">TheGlory Part 2</div>
+            </div>
+            <div class="chain">
+                <div class="item program_meta_pd">
+                </div>
+
+                <div class="item program_meta_sc">
+                </div>
+
+                <div class="item program_meta_act">
+                </div>
+
+
+            </div>
+			 <div class="guide">
+                <div class="tit" style="color: #586477;">FUNdex</div>
+               
+				<p class="fundex_desc">. 화제성 크기 4단계 : XL > L > M > S</p>
+				<p class="fundex_desc">. Fx(재미강도지수) 5단계 : +2 > +1 > 0 > -1 > -2</p>
+                <p class="fundex_desc">. 펀덱스의 최고 레벨은 XL+2 이며 최저 레벨은 S-2임</p>
+                <p class="fundex_desc">. XL+2 : 화제성이 매우 크며 후반으로 갈 수록 재미가 커짐</p>
+                <p class="fundex_desc">. XL+0 : 화제성이 매우 크며 전반 부터 후반까지 재미가 일정하게 이어짐</p>
+				<p class="fundex_desc">. XL -2 : 화제성은 매우 크게 시작되었으나 후반으로 갈 수록 재미가 작아짐</p>
+				<p class="fundex_desc">. S+2 : 화제성은 매주 작았으나 후반으로 갈 수록 재미가 커지면서 마니아층을 확보함</p>
+            </div>
+        </div>
+        </div>
+    </div>
+<!--// 방송메타 > 피디/Scripter/Performers -->
+    
+    <!-- FUNdex2 -->
+    <div class="offcanvas offcanvas-end fxChain2" tabindex="-1" id="fundex2" aria-labelledby="fundex2Label">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="fundex2Label">FUNdex Chain</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div class="top">
+                <img class="img actorimg" src="" alt="actor">
+                <div class="actor_info">
+                   
+                </div>
+            </div>
+            
+            <div class="history">
+                <table>
+                    <tbody class="actor_history">
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="guide">
+                <div class="tit">FUNdex</div>
+                <div >
+                    <table>
+                        <tbody>
+                            <tr >
+                                <th style="color:#fff">화제성 크기 4단계</th>
+                                <td class="fundex_desc">XL > L > M > S</td>
+                            </tr>
+                            <tr>
+                                <th style="color:#fff">Fx(재미강도지수) 5단계</th>
+                                <td class="fundex_desc">+2 > +1 > 0 > -1 > -2</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="fundex_desc">.펀덱스의 최고 레벨은 XL+2 이며 최저 레벨은 S-2임</p>
+                <p class="fundex_desc">.XL+2 : BuzzWorthiness이 매우 크며 후반으로 갈 수록 재미가 커짐</p>
+                <p class="fundex_desc">.XL+0 : BuzzWorthiness이 매우 크며 전반 부터 후반까지 재미가 일정하게 이어짐</p>
+				<p class="fundex_desc">.XL -2 : BuzzWorthiness은 매우 크게 시작되었으나 후반으로 갈 수록 재미가 작아짐</p>
+				<p class="fundex_desc">.S+2 : BuzzWorthiness은 매주 작았으나 후반으로 갈 수록 재미가 커지면서 마니아층을 확보함</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal -->
+    <div class="modal fade" id="share" tabindex="-1" aria-labelledby="shareLabel" aria-hidden="true">
+        <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+            <h1 class="modal-title fs-5" id="shareLabel">공유하기</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="snsWRap">
+                    
+                        <!--<div class="img"></div>-->
+                        <div class="tit">
+							<a id="kakaotalk-sharing-btn" href="javascript:;"> 
+								<img src="https://developers.kakao.com/assets/img/about/logos/kakaotalksharing/kakaotalk_sharing_btn_medium.png" alt="카카오톡 공유 보내기 버튼" />
+							</a>
+						</div>
+                <!--
+                    <a href="#" class="sns facebook">
+                        <div class="img"></div>
+                        <div class="tit">페이스북</div>
+                    </a>
+                    <a href="#" class="sns twitter">
+                        <div class="img"></div>
+                        <div class="tit">트위터</div>
+                    </a>
+				-->
+                </div>
+              <div class="linkCopy">
+                  <input type="text" id="cp_share_url" value="https//www.fundex.co.kr">
+                  <button class="copyBtn">URL 복사</button>
+              </div>
+            </div>
+        </div>
+        </div>
+    </div>
+	
+	<!-- 
+    <div id="capture" style="padding: 10px; background: #f5da55">
+        <h4 style="color: #000; ">Hello world!</h4>
+    </div> -->
+<script>
+
+	var _limit = 10;
+
+	var params = {};
+    var _meta_html = '';
+    var _meta_oqlist_html = '';
+    var _sr_html = '';
+    var _trendg_pg = [];
+    var _trendg_avg = [];
+    
+    var _gp_title = '';
+    var _gp_title2 = '';
+    var _seleted_cat = '';
+    
+	//params.order = 'fx';
+	params.perPage = 10;
+	params.pageoff = 0;
+	params.clsid = getParameter('clsid');
+	params.is_ott = "ott";
+	params.order = 'vid_vc';
+    
+	var __WCD = '202630';
+	
+	var _counter = 1;
+	
+	/*
+	Performers ALL BuzzWorthiness
+		DRAMA Performers BuzzWorthiness 
+		NON-DRAMA Performers BuzzWorthiness
+
+		*/
+
+	function setPagetitle()  {
+		let title_1 = (params.is_ott == 'ott') ? 'TV-OTT' : 'TV';
+		let title_2 = '';
+		//alert(params.is_ott);
+		
+		if(params.cat_id == null) {
+			title_2 = ' ALL';
+		} else if(params.cat_id == 'cat001') {
+			title_2 = ' DRAMA ';
+		} else {
+			title_2 = ' NON-DRAMA';
+		}
+		
+		let title_3 = '';
+		
+		
+		//2023.10.11
+		idx_type_name = "";
+		idx_type = $('#idx_type').val();
+		if(idx_type == "von_cnt") {
+			idx_type_name = " 게시글수";
+		} else if(idx_type == "vid_cnt") {
+			idx_type_name = " 동영상수";
+		} else if(idx_type == "vid_vc") {
+			idx_type_name = " 동영상 조회수";
+		} else if(idx_type == "n_cnt") {
+			idx_type_name = " 뉴스수";
+		} else {
+			idx_type_name = " BuzzWorthiness";
+		}
+			
+		if(params.is_ott == 'topic') {
+			title_1 = '';
+			
+			if(params.cat_id == null) {
+				title_2 = '';
+				title_3 = 'Performers ALL BuzzWorthiness';
+			} else {
+				title_3 = ' Performers BuzzWorthiness';
+			}
+		} else {
+			title_3 = idx_type_name;
+		}
+		
+		$('#page_title').html(title_1 + title_2 + title_3);
+	}
+	
+	
+	//sub page implements
+	function displayPage() {
+		getTvOqlist();
+	}
+
+	//각 서브페이지에서 설정해야함
+	var excelHandler = {
+				getExcelFileName : function(){
+						return 'nowplay_actor.xlsx';
+				},
+				getSheetName : function(){
+						return 'Now Play > Player';
+				},
+				getExcelData : function(){
+						return document.getElementById('excel_data_table');
+				},
+				getWorksheet : function(){
+						return XLSX.utils.table_to_sheet(this.getExcelData());
+				}
+	}
+
+	//sub page
+
+	
+    
+    //program
+    function getProjectlist() {
+		result = null;
+		pjSeq = "";
+		params.pj_seq = getParameter('pjseq');
+		params.wcd = '202630';
+		params.wtype = "week";		//고정값(주간만 존재함)
+		params.table = (params.is_ott=='ott') ? 'v_tvr_week_rank_ott' : 'tvr_week_rank_nor';
+		params.order = 'oqpoint';
+
+		$.ajax({
+			type       : "POST",
+			url        : "select/nowplay.topPjlistOq.do",
+			dataType   : "json",
+			data       : {"param" : JSON.stringify(params)},
+			async      : false,
+			beforeSend:function() {
+			},
+			success    : function(res) {
+				rs = jQuery.parseJSON(JSON.stringify(res));
+				let html = '';
+
+				for(let i=0; i < rs.length; i++) {
+					idx = (rs[i].rnum < 10) ? '0'+rs[i].rnum : rs[i].rnum;
+
+					//rank = (params.cat_id !='' && params.cat_id != undefined) ? (params.oq_chan_id!=undefined) ? eval('rs[i].cat_'+ params.oq_chan_id +'_rank') : rs[i].cat_rank : rs[i].total_rank;
+					rank = (i+1);
+					
+					sharepoint = (params.cat_id !='' && params.cat_id != undefined) ? rs[i].cat_sharepoint : rs[i].total_sharepoint;
+
+					genre = (rs[i].genre_list != undefined) ? rs[i].genre_list : "-";
+
+					remain_count = 0;
+					if(i ==0) {
+						remain_count = (rs[i].totalcnt - params.perPage);
+						//$('.more_btn').html('+ '+ remain_count +' data more');
+						$('.more_btn').html('290 data more');
+					}
+
+					html += '<div class="accordion-item btn_topic_pop" data-c="'+ rs[i].cat_id +'" data-v="'+ rs[i].person_seq +'" >'+
+							'	<h2 class="accordion-header">'+
+							'	<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">'+
+							'		<div class="rank">'+ rank +'.</div>'+
+							'		<img crossorigin="anonymous" class="thumbImg" src="https://www.fundex.co.kr/pjmeta/pjimg/topic/'+rs[i].person_seq+'.jpg" alt="">'+
+							'		<div class="infoWrap">'+
+							'			<div class="tit">'+ rs[i].top_name +'</div>'+
+							'			<!--<div class="subTit">eng name..</div>-->'+
+							'			<div class="value1">'+ rs[i].pjname +'</div>'+
+							'			<div class="value2">'+ (rs[i].epjname!=undefined) ? rs[i].epjname : '' +'</div>'+
+							'		</div>'+
+							'		<div class="score">'+ sharepoint +'%</div>'+
+							'		<div class="nonLink"><a class="btn " style="text-decoration: none; cursor: pointer;" data-c="'+ rs[i].cat_id +'" data-v="'+ rs[i].person_seq +'" data-bs-toggle="offcanvas" href="#fundex2" role="button" aria-controls="fundex2">more</a></div>'+
+							'	</button>'+
+							' </h2>'+
+							'</div>';
+				} //end for
+
+				$('#actor_list').html(html);
+			},
+			error : function(xhs,status,error){
+				console.log("ajax : Error{"+error+"}! "+ status);
+			}
+		});
+	}
+    
+    
+    //Performers 리스트
+	function getTvOqlist() {
+		result = null;
+		pjSeq = "";
+		params.pj_seq = getParameter('pjseq');
+		params.wcd = '202630';
+		params.wtype = "week";		//고정값(주간만 존재함)
+		params.table = 'v_tvr_week_topic_pj_rank_ott';
+		params.order = 'oqpoint';
+
+		$.ajax({
+			type       : "POST",
+			url        : "select/nowplay.topPjlistOq.do",
+			dataType   : "json",
+			data       : {"param" : JSON.stringify(params)},
+			async      : false,
+			beforeSend:function() {
+			},
+			success    : function(res) {
+				rs = jQuery.parseJSON(JSON.stringify(res));
+				let html = '';
+
+				for(let i=0; i < rs.length; i++) {
+					idx = (rs[i].rnum < 10) ? '0'+rs[i].rnum : rs[i].rnum;
+
+					rank = (params.cat_id !='' && params.cat_id != undefined) ? (params.oq_chan_id!=undefined) ? eval('rs[i].cat_'+ params.oq_chan_id +'_rank') : rs[i].cat_rank : rs[i].total_rank;
+					sharepoint = (params.cat_id !='' && params.cat_id != undefined) ? rs[i].cat_sharepoint.toFixed(2) : rs[i].total_sharepoint.toFixed(2);
+
+
+					genre = (rs[i].genre_list != undefined) ? rs[i].genre_list : "-";
+
+					remain_count = 0;
+					if(i ==0) {
+						remain_count = (rs[i].totalcnt - params.perPage);
+						//$('.more_btn').html('+ '+ remain_count +' data more');
+						$('.more_btn').html('290 data more');
+					}
+// this is right
+
+					enames = (rs[i].ename!=undefined) ? rs[i].ename : '';
+					
+					let accordion_target_btn = 'btn_performdetail_'+ rs[i].top_seq ;
+					
+					html += '<div class="accordion-item btn_topic_pop" data-c="'+ rs[i].cat_id +'" data-v="'+ rs[i].person_seq +'">'+
+							'	<h2 class="accordion-header">'+
+							'	<button ID="'+ accordion_target_btn +'" class="accordion-button collapsed" type="button" data-bs-toggle="offcanvas" href="#fundex2" role="button" aria-controls="fundex2">'+
+							'		<div class="rank">'+ rank +'.</div>'+
+							'		<img class="thumbImg" src="https://www.fundex.co.kr/pjmeta/topic/'+rs[i].person_seq+'.jpg" alt="">'+
+							'		<div class="infoWrap">'+
+							'			<div class="tit">'+ rs[i].top_name +'</div>'+
+							'			<div class="subTit">'+ enames +'</div>'+
+							'			<div class="value1">'+ rs[i].pjname +'</div>'+
+							'			<div class="value2">'+ (rs[i].epjname!=undefined ? rs[i].epjname : '') +'</div>'+
+							'		</div>'+
+							'		<div class="score">'+ sharepoint +'%</div>'+
+							'		<div class=""><a class="hasLink " style="text-decoration: none;cursor: pointer;" data-c="'+ rs[i].cat_id +'" data-v="'+ rs[i].person_seq +'" data-bs-toggle="offcanvas" href="#fundex2" role="button" aria-controls="fundex2">more</a></div>'+
+							'	</button>'+
+							' </h2>'+
+							'</div>';
+				} //end for
+
+				$('#actor_list').html(html);
+			},
+			error : function(xhs,status,error){
+				console.log("ajax : Error{"+error+"}! "+ status);
+			}
+		});
+	}
+
+
+	function setCatidoo(obj)  {
+		console.log('----HH ' + $(obj).attr('data-v'));
+		params.cat_id = ($(obj).attr('data-v') != 'all') ? $(obj).attr('data-v') : null;
+		//params.off = 0;
+		setPagetitle();
+		
+		//params.order = s;
+		getTvOqlist();
+	}
+
+    
+    //BuzzWorthiness 순위
+    function getFundexmainList(_t) {
+        result = null;
+		pjSeq = "";
+
+		params.wcd = "202630";
+		params.wtype = "week";		//고정값(주간만 존재함)
+params.order = $('#idx_type').val();
+
+
+		params.table = (params.is_ott == "tv") ? 'tvr_week_rank_nor' : 'tvr_week_rank_nor_ott';
+        let query = (params.is_ott == "tv") ? 'getOqlistNew' : 'getOqlistNew';
+        
+        
+		$.ajax({
+			type       : "POST",
+			url        : "select/nowplay."+ query +".do",
+			dataType   : "json",
+			data       : {"param" : JSON.stringify(params)},
+			async      : false,
+			beforeSend:function() {
+			},
+			success    : function(res) {
+                $('#programlist_'+_t).empty();
+                
+				rs = jQuery.parseJSON(JSON.stringify(res));
+				let html = '';
+
+				for(let i=0; i < rs.length; i++) {
+					idx = (rs[i].rnum < 10) ? '0'+rs[i].rnum : rs[i].rnum;
+
+					rank = (i+1);
+				    //rank = (params.cat_id !='' && params.cat_id != undefined) ? (params.oq_chan_id !='' && params.oq_chan_id != undefined) ? eval('rs[i].cat_'+params.oq_chan_id +'_rank') : rs[i].cat_rank : rs[i].total_rank;
+					tot_ch_rate = (rs[i].total_change_rate !=undefined) ? Math.abs(rs[i].total_change_rate).toFixed(2) : '';
+
+					change_rate_type = (rs[i].total_change_rate < 0) ? "minus" : (rs[i].total_change_rate > 0) ? "plus" : "";
+					change_rate_ico = (rs[i].total_change_rate < 0) ? "-" : "";
+
+					rank_change = (params.cat_id !='' && params.cat_id != undefined) ? rs[i].cat_rank_change2 : rs[i].total_rank_change2;
+							//rank_change = rs[i].cat_rank_change2 ;
+//console.log('rank_change -- '+ rank_change);
+
+					rank_change_type = (params.cat_id !='' && params.cat_id != undefined) ? rs[i].cat_rank_change_type : rs[i].total_rank_change_type;
+					rank_chang_class = (rank_change_type == 1) ? 'plus' : (rank_change_type == -1) ? "minus" : "";
+
+					if(params.cat_id !='' && params.cat_id != undefined) {
+						if(params.order == 'oqpoint') {
+							sharepoint = rs[i].cat_sharepoint.toFixed(2);
+						} else {
+							sharepoint = eval('rs[i].cat_'+params.order+'_sharepoint.toFixed(2)');
+						}
+					} else {
+						if(params.order == 'oqpoint') {
+							sharepoint = rs[i].total_sharepoint.toFixed(2);
+						} else {
+							sharepoint = eval('rs[i].total_'+params.order+'_sharepoint.toFixed(2)');
+						}
+					}
+					
+					//sharepoint = (params.cat_id !='' && params.cat_id != undefined) ? rs[i].cat_sharepoint.toFixed(2) : rs[i].total_sharepoint.toFixed(2);
+				
+					genre = (rs[i].genre_list != undefined) ? "/"+rs[i].genre_list : "";
+
+					remain_count = 0;
+					if(i ==0) {
+						remain_count = (rs[i].totalcnt - params.perPage);
+						remain_count = (remain_count < params.perPage) ? 0 : remain_count;
+						$('.more_btn').html('+ '+ remain_count +' data more');
+					}
+
+					dpage_link = (rs[i].cat_id == 'cat001') ? '/fundex/funprogram.do?pjseq='+ rs[i].pj_seq : 'javascript:openProgramdetail('+ rs[i].pj_seq +')';
+					dpage_link_title = (rs[i].cat_id == 'cat001') ? '프로그램명을 클릭하면 상세페이지로 이동합니다.' : '';
+					
+					//dpage_link_title = '';
+					let v = rs[i].pj_seq;
+                    
+                    let cat_name = (rs[i].cat_id == 'cat001') ? 'Drama' : 'Show';
+                    let detail_func_title = 'more';
+                    //let detail_func_title = (rs[i].cat_id == 'cat001') ? 'more' : '<a href="javascript:setProgramdetail4show('+rs[i].pj_seq+')">FUNdex Chain</a>';
+                    
+					let accordion_switch = '';
+					let accordion_target = '#cont_programdetail_'+v ;
+                    let accordion_target_btn = 'btn_programdetail_'+v ;
+					
+					html += '<div class="accordion-item pglist" data-v="'+rs[i].pj_seq+'" data-c="'+rs[i].cat_id+'">'+
+                            '   <h2 class="accordion-header">'+
+                            '        <button '+accordion_switch+' id="'+ accordion_target_btn +'" class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="'+accordion_target+'" aria-expanded="true" aria-controls="'+accordion_target+'">'+
+                            '          <div class="rank">'+ rank +'.</div>'+
+                            '          <img crossorigin="anonymous" class="thumbImg" src="https://www.fundex.co.kr/pjmeta/pjimg/pj_'+ rs[i].pj_seq +'.jpg" alt="'+ rs[i].pjname +'">'+
+                            '          <div class="infoWrap">'+
+                            '              <div class="tit">'+ rs[i].pjname +'</div>'+
+                            '              <input type="hidden" id="hid_meta_title_'+ rs[i].pj_seq +'" value="'+ rs[i].pjname +'">'+
+                            '              <input type="hidden" id="hid_meta_etitle_'+ rs[i].pj_seq +'" value="'+ rs[i].epjname +'">'+
+                            '              <div class="subTit">'+ (rs[i].epjname!=undefined ? rs[i].epjname : "")  +'</div>'+
+                            '              <div class="introduce">'+ cat_name +'</div>'+
+                            '              <div class="d-flex align-items-center">'+
+                            '                <div class="date">'+ strDateFormats('.', rs[i].startday)+'</div>'+
+                            '                <div class="divider"></div>'+
+                            '                <div class="channel">'+ rs[i].class_name +'</div>'+
+                            '              </div>'+
+                            '         </div>'+
+                            '          <div class="score">'+ sharepoint +'%</div>'+
+                            '          <div class="hasLink" style="cursor: pointer; color:#fff">'+ detail_func_title +'</div>'+
+                            '        </button>'+
+                            '   </h2>'+
+
+                            '</div>';
+
+				} //end for
+                
+                //alert('^______T');
+				$('#programlist_'+_t).html(html);
+				
+				//test 2024.10.24
+				//$("#btn_programdetail_12794").trigger("click");
+				//button = document.getElementById("btn_programdetail_12794");
+				//button.click();
+				
+			},
+			error : function(xhs,status,error){
+				console.log("ajax : Error{"+error+"}! "+ status);
+			}
+		});
+    }
+    
+    
+    function getProgrammeta(pj) {
+		result = null;
+		pjSeq = "";
+		params.pj_seq = pj;
+        
+        let meta_ajax = 
+		$.ajax({
+			type       : "POST",
+			url        : "select/datatable.getprogrammetaNew.do",
+			dataType   : "json",
+			data       : {"param" : JSON.stringify(params)},
+			async      : false,
+			beforeSend:function() {
+			},
+			success    : function(res) {
+				result = jQuery.parseJSON(JSON.stringify(res));
+				_seleted_cat = result[0].cat_id;
+                
+                html =
+                    '           <div class="col-6">'+
+                    '               <div class="tit">Channel</div>'+
+                    '                   <div class="value">'+ result[0].class_name +'</div>'+
+                    '               </div>'+
+                    '               <div class="col-6">'+
+                    '                   <div class="tit">Genre</div>'+
+                    '                   <div class="value">'+ (result[0].genrd_list !=undefined ? result[0].genrd_list : '') +'</div>'+
+                    '               </div>'+
+                    '               <div class="col-6">'+
+                    '                   <div class="tit">OPEN</div>'+
+                    '                   <div class="value">'+ (result[0].onair_startdate != undefined ? strDateFormats('.',result[0].onair_startdate) : '') +'</div>'+
+                    '                </div>'+
+                    //'                <div class="col-6">'+
+                    //'                    <div class="tit">Episode</div>'+
+                    //'                    <div class="value">'+ (result[0].episode != undefined ? result[0].episode : '') +'</div>'+
+                    //'                </div>'+
+                    '                <div class="col-6">'+
+                    '                    <div class="tit">Producer</div>'+
+                    '                    <div class="value">'+ (result[0].producer != undefined ? result[0].producer : '') +'</div>'+
+                    '                </div>'+
+                    '                <div class="col-6">'+
+                    '                    <div class="tit">writer</div>'+
+                    '                    <div class="value">'+ (result[0].scriptor != undefined ? result[0].scriptor : '') +'</div>'+
+                    '                </div>'+
+                    '                <div class="col-12">'+
+                    '                    <div class="tit">performer</div>'+
+                    '                    <div class="value">'+ (result[0].actorlist != undefined ? result[0].actorlist : '') +'</div>'+
+                    '                </div>';
+					
+				if(_seleted_cat == 'cat001') {	
+					html +=
+						'                <div class="col-12">'+
+						'                    <div class="tit">Genre</div>'+
+						'                    <div class="value">'+ (result[0].genrd_list != undefined ? result[0].genrd_list : '') +'</div>'+
+						'                </div>'+
+						'                <div class="col-12">'+
+						'                    <div class="tit">Who</div>'+
+						'                    <div class="value">'+ (result[0].who_list != undefined ? result[0].who_list : '') +'</div>'+
+						'                </div>'+
+						'                <div class="col-12">'+
+						'                    <div class="tit">Where</div>'+
+						'                    <div class="value">'+ (result[0].where_list != undefined ? result[0].where_list : '') +'</div>'+
+						'                </div>'+
+						'                <div class="col-12">'+
+						'                    <div class="tit">When</div>'+
+						'                    <div class="value">'+ (result[0].when_list != undefined ? result[0].when_list : '') +'</div>'+
+						'                </div>'+
+						'                <div class="col-12">'+
+						'                    <div class="tit">Buzz & Feel</div>'+
+						'                    <div class="value">'+ (result[0].feel_list != undefined ? result[0].feel_list : '') +'</div>'+
+						'                </div>';
+				}
+					html +=
+                    '           </div>';
+                
+                _meta_html = html;
+			},
+			error : function(xhs,status,error){
+				console.log("ajax : Error{"+error+"}! "+ status);
+			}
+		});
+        
+        return meta_ajax;
+	}
+    
+    
+    function getProgramoqdetauk(pj) {
+		result = null;
+		pjSeq = "";
+		params.pjseq = pj;
+        
+		//2023.11.06
+        params.table = (params.is_ott == 'ott') ? "home_program_detail_ott" : "home_program_detail";
+		
+        let meta_ajax = 
+		$.ajax({
+			type       : "POST",
+			url        : "select/datatable.home_pgdetail_oq.do",
+			dataType   : "json",
+			data       : {"param" : JSON.stringify(params)},
+			async      : false,
+			beforeSend:function() {
+			},
+			success    : function(res) {
+				result = jQuery.parseJSON(JSON.stringify(res));
+				
+                let html_topic_name = "";
+                let html_oqlist = "";
+                let sr_html_1 = "";
+                let sr_html_2 = "";
+                
+                for (var i = 0; i < result.length; i++) {
+                    if(result[i].tp == 'topic') {
+                        html_topic_name += '<tr><th>'+ result[i].top_name +'</th></tr>';
+                    }     
+                    
+                    if(result[i].tp != 'srchvol') {
+                        let tmp = result[i].oq.split(',');
+                        
+                        html_oqlist += 
+                            '<tr>'+
+                            '   <td>'+ tmp[0] +'</td>'+
+                            '   <td>'+ (tmp[1] == '0' ? '-' : tmp[1]) +'</td>'+
+                            '   <td>'+ (tmp[2] == '0' ? '-' : tmp[2]) +'</td>'+
+                            '   <td>'+ (tmp[3] == '0' ? '-' : tmp[3]) +'</td>'+
+                            '   <td>'+ (tmp[4] == '0' ? '-' : tmp[4]) +'</td>'+
+                            '   <td>'+ (tmp[5] == '0' ? '-' : tmp[5]) +'</td>'+
+                            '   <td>'+ (tmp[6] == '0' ? '-' : tmp[6]) +'</td>'+
+                            '   <td>'+ (tmp[7] == '0' ? '-' : tmp[7]) +'</td>'+
+                            '</tr>';
+                    } //end if
+                    
+                    if(result[i].tp == 'srchvol') {
+                        let tmp = result[i].oq.split(',');
+                        
+                        if(result[i].top_name == 'total') {
+                            sr_html_1 += 
+                                    '<tr>'+
+                                    '   <td>'+ (tmp[0] == '0' ? '-' : tmp[0]) +'</td>'+
+                                    '   <td>'+ (tmp[1] == '0' ? '-' : tmp[1]) +'</td>'+
+                                    '   <td>'+ (tmp[2] == '0' ? '-' : tmp[2]) +'</td>'+
+                                    '   <td>'+ (tmp[3] == '0' ? '-' : tmp[3]) +'</td>'+
+                                    '   <td>'+ (tmp[4] == '0' ? '-' : tmp[4]) +'</td>'+
+                                    '   <td>'+ (tmp[6] == '0' ? '-' : tmp[6]) +'</td>'+
+                                    '   <td>'+ (tmp[5] == '0' ? '-' : tmp[5]) +'</td>'+
+                                    '</tr>';
+                        } else {
+                            sr_html_2 += 
+                                    '<tr>'+
+                                    '   <td class="average">'+ (tmp[0] == '0' ? '-' : tmp[0]) +'</td>'+
+                                    '   <td class="average">'+ (tmp[1] == '0' ? '-' : tmp[1]) +'</td>'+
+                                    '   <td class="average">'+ (tmp[2] == '0' ? '-' : tmp[2]) +'</td>'+
+                                    '   <td class="average">'+ (tmp[3] == '0' ? '-' : tmp[3]) +'</td>'+
+                                    '   <td class="average">'+ (tmp[4] == '0' ? '-' : tmp[4]) +'</td>'+
+                                    '   <td class="average">'+ (tmp[6] == '0' ? '-' : tmp[6]) +'</td>'+
+                                    '   <td class="average">'+ (tmp[5] == '0' ? '-' : tmp[5]) +'</td>'+
+                                    '</tr>';
+                        }
+                    } //end if
+                    
+                } //end for
+                
+                html =
+                    '                <div class="tableItem">'+
+                    '                    <table class="headerTable">'+
+                    '                        <tbody>'+
+                    '                            <tr><th>Week(w)</th></tr>'+
+                    '                            <tr><th>Rank</th></tr>'+
+                    '                            <tr><th class="under">NEWS</th></tr>'+  
+                    '                            <tr><th class="under">VON</th></tr>'+
+                    '                            <tr><th class="under">VIDEO</th></tr>'+
+                    '                            <tr><th class="under">SNS</th></tr>'+ html_topic_name +
+                                                    
+                    //'                            <tr><th>검색순위</th></tr>'+                             
+                    '                        </tbody>'+
+                    '                    </table>'+
+                    '                    <div class="scrollDiv">'+
+                    '                        <table class="bodyTable" style="min-width: 540px;">'+
+                    '                            <tbody>'+ 
+                    '                               <tr>'+ 
+                    '                                    <th>w1</th>'+ 
+                    '                                    <th>w2</th>'+ 
+                    '                                    <th>w3</th>'+ 
+                    '                                    <th>w4</th>'+ 
+                    '                                    <th>w5</th>'+ 
+                    '                                    <th>w6</th>'+ 
+                    '                                    <th>w7</th>'+ 
+                    '                                    <th>w8</th>'+ 
+                    '                                </tr>'+ html_oqlist + 
+                    
+                    '                            </tbody>'+
+                    '                        </table>'+
+                    '                    </div>'+
+                    '                </div>';
+
+                
+                _meta_oqlist_html = html;
+                
+                _sr_html = sr_html_1 + sr_html_2;
+			},
+			error : function(xhs,status,error){
+				console.log("ajax : Error{"+error+"}! "+ status);
+			}
+		});
+        
+        return meta_ajax;
+	}
+    
+    
+    function getProgramTrend(pj) {
+		result = null;
+		pjSeq = "";
+		params.pjseq = pj;
+        
+        let meta_ajax = 
+		$.ajax({
+			type       : "POST",
+			url        : "select/datatable.home_pgdetail_trend.do",
+			dataType   : "json",
+			data       : {"param" : JSON.stringify(params)},
+			async      : false,
+			beforeSend:function() {
+			},
+			success    : function(res) {
+				result = jQuery.parseJSON(JSON.stringify(res));
+				
+                let html_topic_name = "";
+                let avg_type = 1;
+                let ott = '1';
+                
+                for (var i = 0; i < result.length; i++) {
+                    if(result[i].tp == "meta") {
+                        ott = result[i].ky;
+                        avg_type = result[i].pj_seq;
+                    }
+                } //end for
+                
+                
+                let pg_arr = result[0].vv.split(',');
+                let del_count = pg_arr.filter(element => '0' === element).length;
+               
+                
+                /*
+                    프로그램 수치있는 기간과 평균 기간을 맞춰줘야함
+                */
+                for (var i = 0; i < result.length; i++) {
+                    if(result[i].tp == "pg") { 
+                        
+                        let tmp = result[0].vv.split(',');
+                        tmp = tmp.splice(0, (8-del_count));
+                        
+                        _trendg_pg = tmp;
+                    } else if(result[i].tp == "avg") {
+                        if(result[i].pj_seq == avg_type && result[i].ky == ott)  {
+                            //alert(del_count);
+                            
+                            let tmp = result[i].vv.split(',');
+                            tmp = tmp.splice(del_count, (8-del_count));
+                            
+                            _trendg_avg = tmp;
+							//console.log('---------> '+ _trendg_avg);
+                        }
+                    } else if(result[i].tp == "meta") {
+                        _gp_title = result[i].vv;
+                        _gp_title2 = (avg_type==1) ? 'DRAMA' : 'NON-DRAMA';
+                        _gp_title2 = (ott=='1') ? ''+_gp_title2 : 'OTT '+_gp_title2;
+                    }
+                    
+                } //end for
+				
+				
+			},
+			error : function(xhs,status,error){
+				console.log("ajax : Error{"+error+"}! "+ status);
+			}
+		});
+        
+        return meta_ajax;
+	}
+    
+    
+    
+    function setProgramdetail(o) {
+        let v = $(o).attr('data-v');
+        let container = $("#cont_programdetail_"+v).html();
+        
+        //alert(container);
+        if(container != undefined)  {
+            ($("#cont_programdetail_"+v).is(':visible')== true) ? $("#cont_programdetail_"+v).hide() : $("#cont_programdetail_"+v).show();
+            return;
+        }
+        
+        cat = $(o).attr('data-c');
+        
+				if(cat == 'cat001') {
+					addHTML =
+                    '           <div class="chartTit">Recent 8 weeks BuzzWorthiness Trend(2주차부터 그래프에 표기됩니다.)</div>'+
+                    '           <!-- FUNdex Charrt -->'+
+                    '           <div class="chartWrap">'+
+                    '                <canvas id="trendgp_'+v+'"></canvas>'+
+                    '            </div>'+
+					'           <div class="chartTit">Ranking by week</div>'+
+                    '            <!-- Table -->'+
+                    '            <div class="tableWrap">#META_OQLIST#'+ 
+                    '                <div class="tableItem">'+
+                    '                    <table class="headerTable">'+
+                    '                        <thead>'+
+                    '                            <tr>'+
+                    '                                <th colspan="2" style="height: 70px;">Portal Search(%)</th>'+
+                    '                            </tr>'+
+                    '                            <tr>'+
+                    '                                <th class="average">Average(%)</th>'+
+                    '                            </tr>'+
+                    '                        </thead>'+
+                    '                    </table>'+
+                    '                    <div class="scrollDiv">'+
+                    '                        <table class="bodyTable" style="min-width: 340px;">'+
+                    '                            <tbody>'+
+                    '                                <tr>'+
+                    '                                    <th>10s</th>'+
+                    '                                    <th>20s</th>'+
+                    '                                    <th>30s</th>'+
+                    '                                    <th>40s</th>'+
+                    '                                    <th>50s</th>'+
+                    '                                    <th>Male</th>'+
+                    '                                    <th>Female</th>'+
+                    '                                </tr>#SRCHVOL#'+ 
+                    '                            </tbody>'+
+                    '                        </table>'+
+                    '                    </div>'+
+                    '                </div>'+
+                    '            </div>';
+					
+				} else {
+				  addHTML = '';
+				}
+				
+        let html =  '<div id="cont_programdetail_'+v+'" class="accordion-collapse collapse" data-bs-parent="#accordionExample">'+
+                    '   <div class="accordion-body">'+
+                    '       <div class="row detailInfo">#META_HTML#'+ 
+                    '           <a class="btn" data-bs-toggle="offcanvas" href="#fundex1" role="button" aria-controls="fundex1">FUNdex Chain </a>'+
+					addHTML +
+                    '        </div>'+
+                    '      </di';
+        
+        let meta_ajax = getProgrammeta(v);
+        let meta_oqlist = getProgramoqdetauk(v);
+        let trend_gp = getProgramTrend(v);
+      
+        
+        $.when(meta_ajax, meta_oqlist, trend_gp).done(function() {
+            getProgrammeta_pdsc(v, 'pd');
+            getProgrammeta_pdsc(v, 'sc');
+            getProgrammeta_pdsc(v, 'act');
+            
+            $('.meta_title').html( $('#hid_meta_title_'+v).val() );
+            $('.meta_etitle').html( $('#hid_meta_etitle_'+v).val() );
+            
+            
+            html = html.replace('#META_HTML#', _meta_html);
+            html = html.replace('#META_OQLIST#', _meta_oqlist_html);
+            html = html.replace('#SRCHVOL#', _sr_html);
+            
+            console.log(' RESULT ---<'+_gp_title+'> ------> '+ _trendg_pg);
+            $(o).append(html)
+            
+           if(cat == 'cat001') {
+            const ctx1 = document.getElementById('trendgp_'+v);
+            console.log('2222222222222222');
+			
+            new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7', 'w8'],
+                    datasets: [
+                        {
+                            label: _gp_title,
+                            data: _trendg_pg,
+                            borderWidth: 2,
+                            borderColor: 'rgba(255, 190, 36, 1)',
+                            pointRadius: 0,
+                        },
+                        {
+                            label: _gp_title2+' Average(%)',
+                            data: _trendg_avg,
+                            borderWidth: 2,
+                            borderColor: 'rgba(20, 86, 126, 1)',
+                            pointRadius: 0,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio:false,
+                    // aspectRatio:2,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend : {
+                            // fontColor: '#fff',
+                            position : 'bottom',
+                            // rtl : true,
+                            labels : {
+                                fontColor: '#ffffff',
+                                boxWidth : 10,
+                                boxHeight : 4,
+                            }
+                        },
+                        // tooltip : {
+                        //     enabled: false,
+                        //     external: 'average'
+                        // }
+                    }
+                }
+            });
+		}
+
+            $("#cont_programdetail_"+v).show();
+        });
+        
+     
+    } // end function
+        
+    
+    function setIsott(o) {
+        let _tab = $(o).attr('data-v');
+        let nate_flag = getParameter('fm');;
+		
+        params.is_ott = _tab;
+        params.cat_id = (nate_flag == 'nate') ? 'cat001' : null;
+        
+        $('.btn_cat_tab1').removeClass('active');
+		$('.btn_topic_tab').removeClass('active');
+		
+		if(nate_flag != 'nate')  { 
+			$(".btn_cat_tab1[data-v=all]").addClass('active');
+			$(".btn_topic_tab[data-v=all]").addClass('active');
+		} else {
+			$(".btn_cat_tab1[data-v=cat001]").addClass('active');
+			$(".btn_topic_tab[data-v=cat001]").addClass('active');
+		}
+		
+        console.log( $('#tab1TypeFilter3').html() );
+        
+		setPagetitle();
+		
+        if(_tab != "topic") {
+            //alert('^^'+_tab);
+            getFundexmainList('tab1');
+        } else {
+            getTvOqlist();
+        }
+        
+    }      
+    
+    function setCattype(o, _tab) {
+        let v = $(o).attr('data-v');
+        
+        params.cat_id = (v == "all") ? null : v;
+        setPagetitle();
+		
+        //alert('cat');
+        getFundexmainList(_tab);
+    }   
+    
+    
+    
+    function getProgrammeta_pdsc(pj, tp) {
+		result = null;
+		pjSeq = "";
+		params.tp = tp;
+		
+		params.pjseq = pj;
+        params.cat_id = _seleted_cat;
+        
+        
+        let meta_ajax = 
+		$.ajax({
+			type       : "POST",
+			url        : "select/datatable.home_pgmeta_pd.do",
+			dataType   : "json",
+			data       : {"param" : JSON.stringify(params)},
+			async      : false,
+			beforeSend:function() {
+			},
+			success    : function(res) {
+				result = jQuery.parseJSON(JSON.stringify(res));
+				let pool = '';
+                let html = '';
+                let tp_name = '';
+                
+                if(tp == 'pd') tp_name = 'Director';
+                else if(tp == 'sc') tp_name = 'Writer';
+                else if(tp == 'act') tp_name = 'performer';
+                
+                for (var i = 0; i < result.length; i++) {
+					  
+					let szpt = '';
+					if(result[i].cat_id == 'cat001') {
+						szpt = result[i].sz +' '+ ((result[i].pt !=undefined) ? result[i].pt : ''); 
+					} else {
+						szpt = result[i].sz; 
+					}
+					
+					
+                    if(result[i].ky != pool) {
+                        pool = result[i].ky;
+                        
+                         html += (html !='') ? '    </ul>' : '';
+                      
+                         html +=
+                            '    <div class="person">'+
+                            '        <span class="name">'+ result[i].ky +'</span>'+
+                            '        <span class="role">'+tp_name+'</span>'+
+                            '    </div>'+
+                            '    <ul class="list">'+
+                            '        <li>'+
+                            '            <span class="year">'+result[i].yr+'</span>'+
+                            '            <span class="work">'+result[i].pjname+' '+ (result[i].epjname !=undefined ? "("+result[i].epjname+")" : '' )+'</span>'+
+                            '            <span class="fundex">'+szpt+'</span>'+
+                            '        </li>';
+                    } else {
+                        html +=
+                            '        <li>'+
+                            '            <span class="year">'+result[i].yr+'</span>'+
+                            '            <span class="work">'+result[i].pjname+' '+ (result[i].epjname !=undefined ? "("+result[i].epjname+")" : '') +'</span>'+
+                            '            <span class="fundex">'+ szpt +'</span>'+
+                            '        </li>';
+                    }
+                } //end for
+                
+               
+                
+                html = '<div class="item program_meta_pd">'+ html + '</ul></div>';
+                
+                $('.program_meta_'+ tp).html(html);
+			},
+			error : function(xhs,status,error){
+				console.log("ajax : Error{"+error+"}! "+ status);
+			}
+		});
+        
+        return meta_ajax;
+	}
+    
+    
+    function getProgrammeta_actor(ps, c) {
+		result = null;
+		params.pseq = ps;
+		params.cat_id = (c == 'cat001') ? c : "cat002";
+        
+        let meta_ajax = 
+		$.ajax({
+			type       : "POST",
+			url        : "select/datatable.home_pgmeta_actor.do",
+			dataType   : "json",
+			data       : {"param" : JSON.stringify(params)},
+			async      : false,
+			beforeSend:function() {
+			},
+			success    : function(res) {
+				result = jQuery.parseJSON(JSON.stringify(res));
+				let pool = '';
+                let html = '';
+                let tp_name = '';
+                $('.actor_history').empty();
+				
+                html =
+                            '   <tr>'+
+                            '       <th><div>Previous</div></th>'+
+                            '       <th><div>FUNdex</div></th>'+
+                            '       <th><div>Performers<br>Best Rank</div></th>'+
+                            '   </tr>';
+      
+                for (var i = 0; i < result.length; i++) {
+                    let szpt = '';
+                    
+                    if(result[i].cat_id == 'cat001') {
+                        //szpt = result[i].sz +' '+ result[i].pt;
+						szpt = result[i].sz +' '+ ((result[i].pt !=undefined) ? result[i].pt : ''); 
+                    } else {
+                        szpt = result[i].sz; 
+                    }
+					//let aaa = result[i].sz +' '+ (result[i].pt !=undefined) ? result[i].pt : '';
+                    //console.log('^--------------------^ '+ ((result[i].pt !=undefined) ? result[i].pt : '777') );     
+                         
+                         html +=                       
+                            '   <tr>'+
+                            '       <td><div>'+ result[i].yr +' '+ result[i].pjname +'</div></td>'+
+                            '       <td><div>'+szpt +'</div></td>'+
+                            '       <td><div>'+ (result[i].cat_rank !=undefined ? result[i].cat_rank+'위' : '') +'</div></td>'+
+                            '   </tr>';
+                    
+                } //end for
+                
+               
+                
+                //html = '<div class="item program_meta_pd">.....'+ html + '</ul></div>';
+                
+                $('.actor_history').html(html);
+			},
+			error : function(xhs,status,error){
+				console.log("ajax : Error{"+error+"}! "+ status);
+			}
+		});
+        
+        return meta_ajax;
+	}
+    
+    
+    function getActorinfo(ps, c) {
+		result = null;
+		params.pseq = ps;
+        //params.cat_id = c;
+		
+        let meta_ajax = 
+		$.ajax({
+			type       : "POST",
+			url        : "select/datatable.home_actor_info.do",
+			dataType   : "json",
+			data       : {"param" : JSON.stringify(params)},
+			async      : false,
+			beforeSend:function() {
+			},
+			success    : function(res) {
+                result = jQuery.parseJSON(JSON.stringify(res));
+	            let html = '';
+                
+                html =
+                            '<div class="name">'+ result[0].pname +'</div>'+
+                            //'<div class="name-en">Ji youn Lim</div>√
+                            '<div class="agency">'+ result[0].company +'</div>';
+                
+                $('.actorimg').attr('src', 'https://www.fundex.co.kr/pjmeta/topic/'+ps+'.jpg');
+                $('.actor_info').html(html);
+                
+                
+                getProgrammeta_actor(ps, c);
+			},
+			error : function(xhs,status,error){
+				console.log("ajax : Error{"+error+"}! "+ status);
+			}
+		});
+        
+        return meta_ajax;
+	}
+    
+	
+    function thisclick(){
+		//alert('screen cap..'+ document.querySelector('#mainCon'));
+		
+		const options = {
+		  backgroundColor: '#56585C',
+		  useCORS: true
+		};
+		
+        html2canvas(document.querySelector('#mainCon'), options).then(function (canvas) {
+            saveAs(canvas.toDataURL(), 'fundex.png');
+        });    
+    }
+
+    function saveAs(uri, filename) {
+        var link = document.createElement('a');
+        if (typeof link.download === 'string') {
+            link.href = uri;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            window.open(uri);
+        }
+    }
+    
+	
+	//show program meta
+	function setProgramdetail4show(v) {
+        let container = $("#cont_programdetail_"+v).html();
+        
+        //alert(container);
+        if(container != undefined)  {
+            ($("#cont_programdetail_"+v).is(':visible')== true) ? $("#cont_programdetail_"+v).hide() : $("#cont_programdetail_"+v).show();
+            return;
+        }
+        
+		_seleted_cat = 'cat002';
+		
+		let meta1 = getProgrammeta_pdsc(v, 'pd');
+        let meta2 = getProgrammeta_pdsc(v, 'sc');
+        let meta3 = getProgrammeta_pdsc(v, 'act');
+			
+        $.when(meta1, meta2, meta3).done(function() {
+            
+            $('.meta_title').html( $('#hid_meta_title_'+v).val() );
+            $('.meta_etitle').html( $('#hid_meta_etitle_'+v).val() );
+            
+            
+			$('#fundex1').addClass('show');
+            //$("#cont_programdetail_"+v).show();
+        });
+     
+    } // end function
+	
+	
+	function copyToClipBoard() {
+		var content = document.getElementById('cp_share_url');
+		content.select();
+		document.execCommand('copy');
+		alert('주소가 클립보드에 복사되었습니다.');
+    }
+	
+	
+	
+	// nate to fundex
+	 function paramSetCattype(va, _tab) {
+        let v = va;
+        
+		//nate to fundex -- tab selected
+		$('.btn_cat_'+ _tab).removeClass('active');
+		$('#tab1TypeFilter2').addClass('active');
+
+        params.cat_id = (v == "all") ? null : v;
+        setPagetitle();
+	
+		
+        //alert('cat');
+		 if(va != "topic") {
+            getFundexmainList(_tab);
+        } else {
+            getTvOqlist();
+        }
+    } 
+	
+	
+
+
+	$(window).on("load", function() {
+
+		//2024.10.24
+		//nate to fundex -- prog selected
+		setTimeout(function() {
+		  //$("#btn_programdetail_12799").trigger("click");
+
+		  //from nate
+		  //	only tab : tab=ottd, performd
+		  //	program : pj=
+		  //	topic : top=
+		  let _tab = getParameter('tab');
+		  let _pj = getParameter('pj');
+		  let _top = getParameter('top');
+		  
+		  params.nate_cat_id = 'cat001';
+		  setPagetitle();
+		  
+		  if(_tab == 'ottd' || (_pj !='' && _top =='')) {
+			$("#tab1-tab").trigger("click");
+			 
+			if(_pj != '') {
+				$("#btn_programdetail_"+ _pj).trigger("click");
+			}
+		  } else if(_tab == 'performd' || _top !='') {
+			  $("#tab4-tab").trigger("click");
+			  
+			  if(_top != '') {
+				$("#btn_performdetail_"+ _top).trigger("click");
+			}
+		  } else {
+			  //default
+			  $("#tab1-tab").trigger("click");
+		  }
+		  
+		  
+		  
+		  
+		  
+		}, 500);
+
+
+		
+		//getFundexmainList('tab1');
+		//getNowWeek();
+		
+		//for kakao
+		// init 체크
+		if (!Kakao.isInitialized()) {
+		  Kakao.init('41f01386d90f3b2576ec8ba1a5492d53');
+		}
+		
+		Kakao.Share.createDefaultButton({
+			container: '#kakaotalk-sharing-btn',
+			objectType: 'feed',
+			content: {
+			  title: '펀덱스(FUNdex)! 재미를 계산하다',
+			  description: '금주 DRAMA,예능,Performers BuzzWorthiness 순위를 확인하세요',
+			  imageUrl:
+				'https://www.fundex.co.kr/img/kakao-share2.png',
+			  link: {
+				// [내 애플리케이션] > [플랫폼] 에서 등록한 사이트 도메인과 일치해야 함
+				mobileWebUrl: 'https//www.fundex.co.kr',
+				webUrl: 'https//www.fundex.co.kr',
+			  },
+			},
+			buttons: [
+			  {
+				title: '웹으로 보기',
+				link: {
+				  mobileWebUrl: 'https//www.fundex.co.kr',
+				  webUrl: 'https//www.fundex.co.kr',
+				},
+			  }
+			],
+		  });
+
+
+
+            
+		//ad event lestener
+        $(document).on("click", ".tabmenu", function() {
+            html2canvas(document.querySelector("#capture")).then(canvas => {
+                //document.body.appendChild(canvas)
+            });
+            
+            setIsott(this) 
+		});
+        
+        $(document).on("click", ".btn_cat_tab1", function() {
+            setCattype(this, 'tab1') 
+		});
+        $(document).on("click", ".btn_cat_tab2", function() {
+            setCattype(this, 'tab2') 
+		});
+        
+        $(document).on("click", ".pglist", function() {
+            let v = $(this).attr('data-v');
+			let c = $(this).attr('data-c');
+			
+            setProgramdetail(this)
+		});
+        
+		$(document).on("click", ".btn_pjdetail", function() {
+            let v = $(this).attr('data-v');
+            setProgramdetail4show(v);
+		});
+		
+        $(document).on("click", ".download", function() {
+            thisclick()
+		});
+		
+        
+		$(document).on("click", ".copyBtn", function() {
+            copyToClipBoard();
+		});
+		
+		
+		$(document).on("click", ".btn_topic_pop", function() {
+			let v = $(this).attr('data-v');
+			let c = $(this).attr('data-c');
+            //alert('-->'+v);
+            getActorinfo(v, c);
+		});
+		
+		$(document).on("click", ".btn_topic_tab", function() {
+			setCatidoo(this)
+		});
+		
+		$(document).on("change", "#idx_type", function() {
+			setPagetitle();
+			getFundexmainList('tab1');
+		});
+
+	});
+
+</script>
+
+    <footer>
+        <div class="inner">
+            <a href="https://www.fundex.co.kr/fxmain.do"><img class="footLogo" src="./img/footerLogo.svg" alt="footlogo"></a>
+            <ul class="nav">
+			    <li class="nav-item"><a href="award25.html">펀덱스 어워드</a></li>
+                <li class="nav-item"><a href="https://www.fundex.co.kr/fxmain.do">화제성 주간 순위</a></li>
+				<li class="nav-item"><a href="spcreport.do">스페셜 리포트</a></li>
+                <li class="nav-item"><a href="fxnews.do">관련기사</a></li>
+               
+                <li class="nav-item"><a href="https://www.instagram.com/gooddata_official/" target="_imst">순위표</a></li>
+                <li class="nav-item"><a href="dservice.do">데이터 서비스</a></li>
+                <li class="nav-item"><a href="issuepower.do">화제성 조사란</a></li>
+                <li class="nav-item"><a href="company.do">굿데이터코퍼레이션</a></li>
+            </ul>
+            <address><span>서울시 서초구 반포대로 14길 71, 1917호 (주)굿데이터코퍼레이션</span></address>
+            <span>Contact us : <a href="mailto:help@gooddata.co.kr">help@gooddata.co.kr</a></span><br>
+            <span>사업자등록번호 211-88-95333</span><span class="divider"></span><span>대표이사 원순우 </span><br>
+            <span>©GOODDATA Corp.</span>
+        </div>
+    </footer>
+
+	<!-- Google tag (gtag.js) -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-JSWYE0GP3H"></script>
+	<script>
+	  window.dataLayer = window.dataLayer || [];
+	  function gtag(){dataLayer.push(arguments);}
+	  gtag('js', new Date());
+
+	  gtag('config', 'G-JSWYE0GP3H');
+	</script>
+
+   <script>
+	var __WCD = '202314';
+	
+   
+   </script>
+</body>
+</html>
+
