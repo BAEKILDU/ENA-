@@ -42,10 +42,10 @@ def normalize_naver(raw: float | None) -> float | None:
     if v < 0:
         return 0.0
     if v <= 100:
-        return round(v, 2)
+        return float(int(round(v)))
     # 1000점 만점 스케일 가정
     if v <= 1000:
-        return round(_clamp(v / 10.0), 2)
+        return float(int(round(_clamp(v / 10.0))))
     return 100.0
 
 
@@ -58,10 +58,10 @@ def normalize_gooddata(raw: float | None) -> float | None:
         return 0.0
     if v <= 1.0:
         # 0~1 비율
-        return round(_clamp(v * 100.0), 2)
+        return float(int(round(_clamp(v * 100.0))))
     if v <= 100:
-        return round(v, 2)
-    return round(_clamp(v), 2)
+        return float(int(round(v)))
+    return float(int(round(_clamp(v))))
 
 
 def normalize_articles(count: float | None, *, ref_max: float = 200.0) -> float | None:
@@ -72,7 +72,7 @@ def normalize_articles(count: float | None, *, ref_max: float = 200.0) -> float 
     if c <= 0:
         return 0.0
     score = 100.0 * math.log1p(c) / math.log1p(ref_max)
-    return round(_clamp(score), 2)
+    return float(int(round(_clamp(score))))
 
 
 def normalize_community(raw: float | None) -> float | None:
@@ -83,8 +83,8 @@ def normalize_community(raw: float | None) -> float | None:
     if v < 0:
         return 0.0
     if v <= 100:
-        return round(v, 2)
-    return round(_clamp(v), 2)
+        return float(int(round(v)))
+    return float(int(round(_clamp(v))))
 
 
 def _fallback_from_rating(rating: float | None) -> float:
@@ -188,15 +188,15 @@ def compute_buzz_score(
                 "raw": raws[key],
                 "normalized": norm,
                 "weight": w,
-                "weight_effective": round(w_eff, 4),
-                "contribution": round(contrib, 2),
+                "weight_effective": round(w_eff, 0),
+                "contribution": int(round(contrib)),
                 "status": "반영",
             }
         )
 
     score = int(round(_clamp(total)))
     parts = [
-        f"{c['label']} {c['normalized']:.1f}×{c['weight_effective']*100:.0f}%"
+        f"{c['label']} {int(round(float(c['normalized'])))}×{int(round(c['weight_effective']*100))}%"
         for c in components
         if c["normalized"] is not None
     ]

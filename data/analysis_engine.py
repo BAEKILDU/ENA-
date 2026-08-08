@@ -183,11 +183,11 @@ def _build_swot_analysis(
 
 
 def _build_score_details(cast_score: float, competition_score: float, format_score: float) -> dict:
-    buzz = round(min(10, (cast_score + format_score) / 2 + random.uniform(-0.3, 0.5)), 1)
-    originality = round(min(10, format_score + random.uniform(-0.8, 0.8)), 1)
-    mass = round(min(10, (cast_score + competition_score) / 2 + random.uniform(-0.4, 0.6)), 1)
-    feasibility = round(min(10, 6.5 + random.uniform(-0.5, 1.5)), 1)
-    scalability = round(min(10, (buzz + originality) / 2 + random.uniform(-0.3, 0.7)), 1)
+    buzz = int(round(min(10, (cast_score + format_score) / 2 + random.uniform(-0.3, 0.5))))
+    originality = int(round(min(10, format_score + random.uniform(-0.8, 0.8))))
+    mass = int(round(min(10, (cast_score + competition_score) / 2 + random.uniform(-0.4, 0.6))))
+    feasibility = int(round(min(10, 6.5 + random.uniform(-0.5, 1.5))))
+    scalability = int(round(min(10, (buzz + originality) / 2 + random.uniform(-0.3, 0.7))))
 
     details = {
         "화제성": {

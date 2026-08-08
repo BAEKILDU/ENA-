@@ -144,8 +144,8 @@ def render() -> None:
         st.caption("드라마는 예능 성과 분석의 비교 기준으로만 활용합니다.")
         d_chart = drama_df.dropna(subset=["rating"]).head(10)
         if not d_chart.empty:
-            avg_v = float(df["rating"].mean()) if not df.empty and "rating" in df.columns else 0.0
-            avg_d = float(d_chart["rating"].mean())
+            avg_v = round(float(df["rating"].mean()), 3) if not df.empty and "rating" in df.columns else 0.0
+            avg_d = round(float(d_chart["rating"].mean()), 3)
             st.plotly_chart(
                 grouped_bar_chart(
                     categories=["예능 평균", "드라마 비교군 평균"],
@@ -158,7 +158,7 @@ def render() -> None:
             st.plotly_chart(
                 bar_chart(
                     x=d_chart["title"].tolist(),
-                    y=d_chart["rating"].tolist(),
+                    y=[round(float(v), 3) for v in d_chart["rating"].tolist()],
                     title="",
                     y_title="시청률 (%)",
                     text_template="%{y:.3f}%",

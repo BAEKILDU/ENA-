@@ -312,7 +312,7 @@ def render() -> None:
                         categories=view["target"].tolist(),
                         series={
                             "시청률(%)": view["rating"].fillna(0).round(3).tolist(),
-                            "점유율(%)": view["share"].fillna(0).round(2).tolist(),
+                            "점유율(%)": view["share"].fillna(0).round(3).tolist(),
                         },
                         title="",
                         y_title="지표",

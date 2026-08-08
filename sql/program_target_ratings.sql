@@ -15,6 +15,7 @@ create table if not exists public.program_target_ratings (
 create index if not exists idx_program_target_ratings_category
   on public.program_target_ratings (category);
 
+
 alter table public.program_target_ratings disable row level security;
 
 grant select, insert, update, delete

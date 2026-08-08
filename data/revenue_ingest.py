@@ -285,6 +285,11 @@ def _to_float(value: Any) -> float | None:
         return None
 
 
+def _to_revenue(value: Any) -> float | None:
+    n = _to_float(value)
+    return round(n, 1) if n is not None else None
+
+
 def _clean_program(value: Any) -> str | None:
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return None
@@ -344,7 +349,7 @@ def parse_revenue_excel(path: str | Path) -> tuple[str, list[dict]]:
                     last_category = cat
             continue
 
-        revenue = _to_float(raw[mapping["revenue_million"]])
+        revenue = _to_revenue(raw[mapping["revenue_million"]])
         if revenue is None:
             continue
 
@@ -390,15 +395,133 @@ def parse_revenue_excel(path: str | Path) -> tuple[str, list[dict]]:
     return primary, rows
 
 
+def _extract_amount_list(text: str) -> list[float]:
+    """PDF에 붙은 금액 문자열에서 숫자 목록 추출 (천단위 콤마·소수 1자리 대응)."""
+    if not text:
+        return []
+    # #DIV/0! 제거 후 숫자만 추출
+    cleaned = text.replace("#DIV/0!", " ")
+    found = re.findall(r"\d{1,3}(?:,\d{3})*(?:\.\d)?|\d+(?:\.\d)?", cleaned)
+    out: list[float] = []
+    for tok in found:
+        try:
+            out.append(float(tok.replace(",", "")))
+        except ValueError:
+            continue
+    return out
+
+
+def _amounts_after_label(text: str, label: str) -> list[float]:
+    m = re.search(re.escape(label) + r"(.+?)(?=(총매출|직접매출|간접매출|패키지광고|IMC|디지털유통|일반유통|효율광고|인포머셜|수신료|CAPEX|제작비|본방|총 ROI|직접 ROI|유튜브|구분|$))", text, flags=re.DOTALL)
+    if not m:
+        # fallback: label 이후 짧은 구간
+        m2 = re.search(re.escape(label) + r"(.{0,180})", text)
+        if not m2:
+            return []
+        return _extract_amount_list(m2.group(1))
+    return _extract_amount_list(m.group(1))
+
+
+def _normalize_roi_title(raw: str) -> str:
+    s = str(raw or "").strip()
+    s = re.sub(r"\s*시청률\s*&\s*ROI\s*$", "", s).strip()
+    s = s.replace("'26년 오리지널 예능", "오리지널 예능 합계")
+    s = s.replace("나는솔로", "나는 솔로").replace("나는SOLO", "나는 솔로")
+    s = s.replace("쯔양몇끼", "쯔양 몇끼")
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
+def _report_date_from_roi_text(text: str, filename: str) -> str:
+    m = re.search(r"(20\d{2})\s*년\s*(\d{1,2})\s*월\s*말", text)
+    if m:
+        y, mo = int(m.group(1)), int(m.group(2))
+        # 말일 근사: 6월 말 → 06-30
+        last_day = 30 if mo in {4, 6, 9, 11} else (31 if mo != 2 else 28)
+        return date(y, mo, last_day).isoformat()
+    m2 = re.search(r"_(\d{2})(\d{2})\.pdf$", filename, flags=re.I)
+    if m2:
+        return date(2026, int(m2.group(1)), int(m2.group(2))).isoformat()
+    return date.today().isoformat()
+
+
+def parse_roi_pdf(path: str | Path) -> tuple[str, list[dict[str, Any]]]:
+    """오리지널 예능 시청률 & ROI PDF → revenue_records 행."""
+    from pypdf import PdfReader
+
+    path = Path(path)
+    reader = PdfReader(str(path))
+    full_text = "\n".join((page.extract_text() or "") for page in reader.pages)
+    report_date = _report_date_from_roi_text(full_text, path.name)
+
+    rows: list[dict[str, Any]] = []
+    for page in reader.pages:
+        text = (page.extract_text() or "").replace("\n", "")
+        if not text:
+            continue
+        titles = re.findall(r"<([^<>]+)>", text)
+        # 프로그램별 ROI 페이지만 (합계 페이지 포함)
+        prog_titles = [t for t in titles if "ROI" in t or "시청률" in t]
+        if not prog_titles:
+            continue
+        title = _normalize_roi_title(prog_titles[0])
+        if not title:
+            continue
+
+        total_sales = _amounts_after_label(text, "총매출")
+        direct_sales = _amounts_after_label(text, "직접매출")
+        indirect_sales = _amounts_after_label(text, "간접매출")
+        capex = _amounts_after_label(text, "제작비")
+        if not capex:
+            capex = _amounts_after_label(text, "CAPEX")
+
+        def add_row(category: str, amounts: list[float], note: str) -> None:
+            if not amounts:
+                return
+            total = amounts[0]
+            if total is None:
+                return
+            rows.append(
+                {
+                    "report_date": report_date,
+                    "program_name": title,
+                    "channel": "ENA",
+                    "category": category,
+                    "revenue_million": round(float(total), 1),
+                    "note": note,
+                    "source_file": path.name,
+                }
+            )
+
+        add_row("총매출", total_sales, "ROI PDF · 합계")
+        add_row("직접매출", direct_sales, "ROI PDF · 합계")
+        add_row("간접매출", indirect_sales, "ROI PDF · 합계")
+        add_row("CAPEX", capex, "ROI PDF · 제작비 합계")
+
+    if not rows:
+        raise ValueError(
+            "ROI PDF에서 매출 행을 찾지 못했습니다. "
+            "'◎ 26년 오리지널 예능 시청률 & ROI_…pdf' 형식인지 확인해 주세요."
+        )
+    return report_date, rows
+
+
 def upload_revenue_file(path: str | Path, *, dry_run: bool = False) -> dict[str, Any]:
     path = Path(path)
-    report_date, rows = parse_revenue_excel(path)
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
+        report_date, rows = parse_roi_pdf(path)
+        source_kind = "roi_pdf"
+    else:
+        report_date, rows = parse_revenue_excel(path)
+        source_kind = "excel"
     summary: dict[str, Any] = {
         "report_date": report_date,
         "source_file": path.name,
+        "source_kind": source_kind,
         "tables": {"revenue_records": len(rows)},
         "uploaded": {},
-        "sample": rows[:3],
+        "sample": rows[:5],
     }
     if dry_run:
         return summary

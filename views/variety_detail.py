@@ -38,10 +38,18 @@ def _render_buzz_breakdown(title: str, rating: float, catalog_show: dict) -> Non
             {
                 "구성 지표": c.get("label"),
                 "원본값": c.get("raw"),
-                "정규화(0~100)": c.get("normalized"),
-                "기본 가중치": f"{float(c.get('weight') or 0) * 100:.0f}%",
-                "적용 가중치": f"{float(c.get('weight_effective') or 0) * 100:.0f}%",
-                "기여 점수": c.get("contribution"),
+                "정규화(0~100)": (
+                    int(round(float(c["normalized"])))
+                    if c.get("normalized") is not None
+                    else None
+                ),
+                "기본 가중치": f"{int(round(float(c.get('weight') or 0) * 100))}%",
+                "적용 가중치": f"{int(round(float(c.get('weight_effective') or 0) * 100))}%",
+                "기여 점수": (
+                    int(round(float(c["contribution"])))
+                    if c.get("contribution") is not None
+                    else None
+                ),
                 "상태": c.get("status"),
             }
         )
@@ -65,7 +73,7 @@ def _render_buzz_breakdown(title: str, rating: float, catalog_show: dict) -> Non
                 y=[float(c["contribution"] or 0) for c in contribs],
                 title="",
                 y_title="기여 점수",
-                text_template="%{y:.1f}",
+                text_template="%{y:.0f}",
             ),
             use_container_width=True,
         )
@@ -154,12 +162,18 @@ def render() -> None:
     )
 
     render_section_title("동시간대 경쟁")
-    comp_df = get_competition_data(show["slot"])
+    comp_df = get_competition_data(show["slot"], selected_title=show.get("title"))
     if comp_df.empty:
         st.info("해당 시간대 경쟁 데이터가 없습니다.")
     else:
-        highlight = {i for i, ena in enumerate(comp_df["is_ena"].tolist()) if ena}
+        if "is_selected" in comp_df.columns:
+            highlight = {i for i, sel in enumerate(comp_df["is_selected"].tolist()) if sel}
+        else:
+            highlight = {i for i, ena in enumerate(comp_df["is_ena"].tolist()) if ena}
         labels = [f"{r.channel} · {r.title}" for r in comp_df.itertuples()]
+        st.caption(
+            f"기준 콘텐츠(좌측) + 주요채널 동시간대 상위 {max(0, len(comp_df) - 1)}개 비교"
+        )
         st.plotly_chart(
             bar_chart(
                 x=labels,
@@ -171,16 +185,19 @@ def render() -> None:
             ),
             use_container_width=True,
         )
+        rename_map = {
+            "channel": "채널",
+            "title": "프로그램",
+            "rating": "시청률(%)",
+            "is_selected": "기준",
+            "is_ena": "ENA",
+            "data_source": "출처",
+        }
+        table_df = comp_df.rename(columns={k: v for k, v in rename_map.items() if k in comp_df.columns})
+        if "시청률(%)" in table_df.columns:
+            table_df["시청률(%)"] = table_df["시청률(%)"].map(lambda v: round(float(v), 3))
         st.dataframe(
-            comp_df.rename(
-                columns={
-                    "channel": "채널",
-                    "title": "프로그램",
-                    "rating": "시청률(%)",
-                    "is_ena": "ENA",
-                    "data_source": "출처",
-                }
-            ),
+            table_df,
             use_container_width=True,
             hide_index=True,
         )

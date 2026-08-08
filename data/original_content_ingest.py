@@ -93,6 +93,12 @@ def _rating(v: Any) -> float | None:
     return round(n, 3) if n is not None else None
 
 
+def _money(v: Any) -> float | None:
+    """매출/CAPEX는 소수 1자리로 통일."""
+    n = _num(v)
+    return round(n, 1) if n is not None else None
+
+
 def _date_iso(v: Any) -> str | None:
     if isinstance(v, datetime):
         return v.date().isoformat()
@@ -160,7 +166,7 @@ def _extract_summary(path: Path, report_date: str) -> list[dict]:
         title = _clean_title(vals[2]) if len(vals) > 2 else None
         if not title or not category:
             continue
-        capex = _num(vals[6]) if len(vals) > 6 else None
+        capex = _money(vals[6]) if len(vals) > 6 else None
         rating = _rating(vals[4]) if len(vals) > 4 else None
         if capex is None and rating is None:
             continue
@@ -202,7 +208,7 @@ def _extract_drama_compare(path: Path, report_date: str) -> list[dict]:
             continue
         episodes = int(_num(vals[4]) or 0) or None
         rating = _rating(vals[6]) if len(vals) > 6 else None
-        capex = _num(vals[11]) if len(vals) > 11 else None
+        capex = _money(vals[11]) if len(vals) > 11 else None
         if not episodes and not rating and not capex:
             continue
         rows.append(
@@ -213,7 +219,7 @@ def _extract_drama_compare(path: Path, report_date: str) -> list[dict]:
                 "pd": _clean_title(vals[2]) if len(vals) > 2 else None,
                 "episodes": episodes,
                 "rating_target_p2049": rating,
-                "grp": _num(vals[7]) if len(vals) > 7 else None,
+                "grp": _rating(vals[7]) if len(vals) > 7 else None,
                 "rank": int(_num(vals[10]) or 0) or None if len(vals) > 10 else None,
                 "capex_million": capex,
                 "channel": "ENA",
@@ -250,7 +256,7 @@ def _extract_variety_compare(path: Path, report_date: str) -> list[dict]:
                 "pd": _clean_title(vals[2]) if len(vals) > 2 else None,
                 "episodes": episodes,
                 "rating_target_p2049": rating,
-                "grp": _num(vals[8]) if len(vals) > 8 else None,
+                "grp": _rating(vals[8]) if len(vals) > 8 else None,
                 "rank": int(_num(vals[11]) or 0) or None if len(vals) > 11 else None,
                 "capex_million": None,
                 "channel": "ENA",
@@ -303,7 +309,7 @@ def _extract_capex_monthly(path: Path, report_date: str) -> pd.DataFrame:
         title = _clean_title(vals[2]) if len(vals) > 2 else None
         if not title:
             continue
-        total = _num(vals[3]) if len(vals) > 3 else None
+        total = _money(vals[3]) if len(vals) > 3 else None
         base = {
             "report_date": report_date,
             "category": category,
@@ -316,7 +322,7 @@ def _extract_capex_monthly(path: Path, report_date: str) -> pd.DataFrame:
             col = 4 + i
             if col >= len(vals):
                 break
-            amount = _num(vals[col])
+            amount = _money(vals[col])
             if amount is None:
                 continue
             rows.append({**base, "month": month, "capex_million": amount})
@@ -349,7 +355,7 @@ def _extract_targets(path: Path, report_date: str) -> pd.DataFrame:
                 "program_name": title,
                 "target_episodes": int(_num(vals[2]) or 0) or None,
                 "target_rating": avg,
-                "target_grp": _num(vals[4]) if len(vals) > 4 else None,
+                "target_grp": _rating(vals[4]) if len(vals) > 4 else None,
                 "category": "예능",
                 "source_file": path.name,
                 "data_area": "variety",

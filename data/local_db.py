@@ -147,8 +147,20 @@ CREATE TABLE IF NOT EXISTS program_buzz_inputs (
 
 
 def db_path() -> Path:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    return DB_PATH
+    """배포 환경(Streamlit Cloud)에서도 쓰기 가능한 DB 경로를 반환."""
+    preferred = DB_PATH
+    try:
+        preferred.parent.mkdir(parents=True, exist_ok=True)
+        probe = preferred.parent / ".write_probe"
+        probe.write_text("ok", encoding="utf-8")
+        probe.unlink(missing_ok=True)
+        return preferred
+    except OSError:
+        import tempfile
+
+        fallback = Path(tempfile.gettempdir()) / "ena_plus" / "ena_plus.db"
+        fallback.parent.mkdir(parents=True, exist_ok=True)
+        return fallback
 
 
 def connect() -> sqlite3.Connection:

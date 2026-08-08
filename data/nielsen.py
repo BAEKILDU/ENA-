@@ -88,8 +88,9 @@ def get_channel_rankings(report_date: str) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def get_competition_ratings(report_date: str) -> pd.DataFrame:
-    rows = _fetch_all("nielsen_competition_ratings", {"report_date": report_date})
+def get_all_competition_ratings() -> pd.DataFrame:
+    """전체 리포트일 경쟁 시청률 (트렌드/시계열용)."""
+    rows = _fetch_all("nielsen_competition_ratings")
     df = pd.DataFrame(rows)
     if df.empty:
         return df

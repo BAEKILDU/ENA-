@@ -74,7 +74,7 @@ def render() -> None:
             y=list(scores.values()),
             title="",
             y_title="점수 (10점 만점)",
-            text_template="%{y}",
+            text_template="%{y:.0f}",
             height=380,
         ),
         use_container_width=True,

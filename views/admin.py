@@ -12,9 +12,23 @@ import streamlit as st
 from data.nielsen_ingest import upload_nielsen_file
 from data.original_content_ingest import apply_original_workbook, detect_workbook_kind
 from data.revenue_ingest import build_revenue_template_bytes, upload_revenue_file
-from data.supabase_upload import push_program_buzz_inputs, push_program_targets, storage_status
+from data.supabase_upload import (
+    push_program_buzz_inputs,
+    push_program_exclusions,
+    push_program_targets,
+    storage_status,
+)
 from data import local_db
 from utils.components import navigate_to, render_page_header, render_section_title
+
+
+def _reset_widget_keys_on_change(watch_key: str, current: str, widget_keys: list[str]) -> None:
+    """타이틀 등 선택 변경 시 이전 입력 위젯 상태를 지워 저장값이 다시 로드되게 함."""
+    prev_key = f"_prev_{watch_key}"
+    if st.session_state.get(prev_key) != current:
+        for k in widget_keys:
+            st.session_state.pop(k, None)
+        st.session_state[prev_key] = current
 
 
 def _save_upload(uploaded, suffix: str) -> Path:
@@ -148,7 +162,10 @@ def _render_ratings_uploader() -> None:
 
 def _render_revenue_uploader() -> None:
     render_section_title("3. 매출 템플릿 / CAPEX (전용)")
-    st.caption("단순 매출 템플릿 또는 CAPEX 시트 → revenue_records")
+    st.caption(
+        "단순 매출 템플릿 · CAPEX 엑셀 · "
+        "오리지널 예능 시청률&ROI PDF → revenue_records"
+    )
     st.download_button(
         label="매출 템플릿 다운로드 (.xlsx)",
         data=build_revenue_template_bytes(),
@@ -156,19 +173,28 @@ def _render_revenue_uploader() -> None:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         key="admin_revenue_template",
     )
-    file = st.file_uploader("매출 파일", type=["xls", "xlsx"], key="admin_revenue_file")
+    file = st.file_uploader(
+        "매출 파일",
+        type=["xls", "xlsx", "pdf"],
+        key="admin_revenue_file",
+        help="엑셀(xls/xlsx) 또는 오리지널 예능 시청률&ROI PDF",
+    )
     if st.button("매출 처리 · 업로드", type="primary", key="admin_revenue_btn"):
         if file is None:
             st.error("매출 파일을 선택해 주세요.")
             return
-        path = _save_upload(file, Path(file.name).suffix.lower() or ".xlsx")
+        suffix = Path(file.name).suffix.lower() or ".xlsx"
+        path = _save_upload(file, suffix)
         try:
-            kind = detect_workbook_kind(path, original_name=file.name)
-            with st.spinner("매출/오리지널 처리 중…"):
-                if kind == "original_content":
-                    summary = apply_original_workbook(path, original_name=file.name)
-                else:
+            with st.spinner("매출/ROI 처리 중…"):
+                if suffix == ".pdf":
                     summary = upload_revenue_file(path)
+                else:
+                    kind = detect_workbook_kind(path, original_name=file.name)
+                    if kind == "original_content":
+                        summary = apply_original_workbook(path, original_name=file.name)
+                    else:
+                        summary = upload_revenue_file(path)
             _clear_data_caches()
             st.success(
                 f"처리 완료 · 기준일 {summary.get('report_date')} · "
@@ -219,6 +245,16 @@ def _render_target_rating_editor() -> None:
     title_meta = {t["program_name"]: t.get("category") or "" for t in titles}
 
     selected = st.selectbox("타이틀 선택", options=options, key="admin_target_title")
+    _reset_widget_keys_on_change(
+        "admin_target_title",
+        selected,
+        [
+            "admin_target_value",
+            "admin_target_cat",
+            "admin_target_buzz",
+            "admin_target_revenue",
+        ],
+    )
     current = saved.get(selected) or {}
     default_val = float(current["target_rating"]) if current.get("target_rating") is not None else 0.0
     default_buzz = float(current["target_buzz"]) if current.get("target_buzz") is not None else 0.0
@@ -268,7 +304,7 @@ def _render_target_rating_editor() -> None:
             max_value=100000.0,
             value=float(default_rev_eok),
             step=0.01,
-            format="%.2f",
+            format="%.1f",
             key="admin_target_revenue",
         )
 
@@ -279,7 +315,7 @@ def _render_target_rating_editor() -> None:
                 "category": category,
                 "target_rating": round(float(target_val), 3),
                 "target_buzz": float(target_buzz),
-                "target_revenue_million": round(float(target_rev_eok) * 100.0, 2),
+                    "target_revenue_million": round(float(target_rev_eok) * 100.0, 1),
                 "note": "admin",
             }
         ]
@@ -289,7 +325,7 @@ def _render_target_rating_editor() -> None:
         backend = sync.get("backend") or "local"
         msg = (
             f"'{selected}' 목표 시청률 {float(target_val):.3f}% · "
-            f"화제성 {int(target_buzz)}점 · 매출 {float(target_rev_eok):.2f}억원 저장"
+            f"화제성 {int(target_buzz)}점 · 매출 {float(target_rev_eok):.1f}억원 저장"
         )
         if backend == "supabase":
             st.success(f"{msg} · Supabase 동기화 완료 · 각 섹션에 반영됨")
@@ -320,7 +356,7 @@ def _render_target_rating_editor() -> None:
                         else None
                     ),
                     "목표 매출(억)": (
-                        round(float(r["target_revenue_million"]) / 100.0, 2)
+                        round(float(r["target_revenue_million"]) / 100.0, 1)
                         if r.get("target_revenue_million") is not None
                         else None
                     ),
@@ -349,20 +385,33 @@ def _render_title_exclusion_editor() -> None:
     current = local_db.list_excluded_titles()
     default = [t for t in current if t in options]
 
+    # 세션에 값이 없을 때만 DB 제외 목록을 초기값으로 넣어 선택 초기 방지
+    if "admin_exclude_titles" not in st.session_state:
+        st.session_state["admin_exclude_titles"] = default
+
     selected = st.multiselect(
         "제외할 타이틀 선택",
         options=options,
-        default=default,
         key="admin_exclude_titles",
     )
 
     if st.button("제외 목록 저장 · 전체 섹션 반영", type="primary", key="admin_exclude_save"):
         local_db.set_excluded_titles(selected)
+        sync = push_program_exclusions(selected)
         _clear_data_caches()
+        backend = sync.get("backend") or "local"
         if selected:
-            st.success(f"{len(selected)}개 타이틀 제외 · 전체 섹션에 반영됨")
+            msg = f"{len(selected)}개 타이틀 제외 · 전체 섹션에 반영됨"
         else:
-            st.success("제외 목록을 비웠습니다 · 전체 타이틀이 다시 포함됩니다")
+            msg = "제외 목록을 비웠습니다 · 전체 타이틀이 다시 포함됩니다"
+        if backend == "supabase":
+            st.success(f"{msg} · Supabase 동기화 완료")
+        else:
+            warn = sync.get("warning")
+            st.warning(
+                f"{msg} · 로컬 저장됨"
+                + (f" (Supabase 미동기화: {warn})" if warn else " (Supabase 미연결)")
+            )
         st.rerun()
 
     if current:
@@ -387,6 +436,17 @@ def _render_buzz_inputs_editor() -> None:
     options = [t["program_name"] for t in titles]
     title_meta = {t["program_name"]: t.get("category") or "" for t in titles}
     selected = st.selectbox("타이틀 선택", options=options, key="admin_buzz_title")
+    _reset_widget_keys_on_change(
+        "admin_buzz_title",
+        selected,
+        [
+            "admin_buzz_naver",
+            "admin_buzz_articles",
+            "admin_buzz_gooddata",
+            "admin_buzz_community",
+            "admin_buzz_cat",
+        ],
+    )
     current = saved.get(selected) or {}
     raw_cat = str(current.get("category") or title_meta.get(selected) or "").strip()
     category_options = ["예능", "드라마"]
@@ -404,7 +464,7 @@ def _render_buzz_inputs_editor() -> None:
             max_value=1000.0,
             value=_f("naver_index"),
             step=0.1,
-            format="%.1f",
+            format="%.0f",
             key="admin_buzz_naver",
             help="0~100 또는 0~1000 스케일 모두 가능 (자동 정규화)",
         )
@@ -424,7 +484,7 @@ def _render_buzz_inputs_editor() -> None:
             max_value=100.0,
             value=_f("gooddata_index"),
             step=0.1,
-            format="%.1f",
+            format="%.0f",
             key="admin_buzz_gooddata",
             help="굿데이터/Fundex 화제성 지수 또는 점유율(%)",
         )

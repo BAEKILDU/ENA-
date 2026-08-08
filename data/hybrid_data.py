@@ -19,6 +19,22 @@ from data import original_content as oc
 PREFERRED_TARGET = "개인2049"
 ENA_CHANNELS = {"ENA", "ENA PLAY", "ENA DRAMA", "ENA STORY"}
 VARIETY_SHEETS = ("ENA경쟁채널시청률", "ENA PLAY경쟁채널시청률")
+MAJOR_CHANNELS = {
+    "KBS1",
+    "KBS2",
+    "MBC",
+    "SBS",
+    "tvN",
+    "JTBC",
+    "TV CHOSUN",
+    "TV조선",
+    "채널A",
+    "MBN",
+    "ENA",
+    "ENA PLAY",
+    "ENA DRAMA",
+    "ENA STORY",
+}
 DEFAULT_SLOTS = ["월 22:00", "화 22:00", "수 22:00", "목 22:30", "금 23:00", "토 21:00", "일 19:30"]
 
 
@@ -85,7 +101,7 @@ def _stable_id(prefix: str, name: str) -> str:
 def _metrics_from_rating(rating: float) -> dict[str, Any]:
     r = float(rating or 0)
     buzz = int(min(99, max(20, round(r * 80 + 35))))
-    revenue = int(max(50, round(r * 1200 + 80)))
+    revenue = round(max(50.0, r * 1200 + 80), 1)
     target_rating = round(max(0.05, r * 0.85), 3)
     history = [round(max(0, r * f), 3) for f in (0.7, 0.8, 0.85, 0.9, 0.95, 0.98, 1.0, 1.0)]
     trend = "상승" if r >= 0.2 else ("유지" if r >= 0.05 else "하락")
@@ -97,7 +113,7 @@ def _metrics_from_rating(rating: float) -> dict[str, Any]:
         "rating_history": history,
         "target_rating": target_rating,
         "target_buzz": max(30, buzz - 8),
-        "target_revenue_million": max(40, int(revenue * 0.85)),
+        "target_revenue_million": round(max(40.0, float(revenue) * 0.85), 1),
     }
 
 
@@ -145,8 +161,8 @@ def build_nielsen_shows(report_date: str | None = None) -> list[dict]:
         # 오리지널 콘텐츠 CAPEX(백만)가 있으면 매출에 반영
         real_rev = oc.match_revenue(title, revenue_map)
         if real_rev is not None:
-            metrics["revenue_million"] = round(float(real_rev), 2)
-            metrics["target_revenue_million"] = max(40, int(float(real_rev) * 0.85))
+            metrics["revenue_million"] = round(float(real_rev), 1)
+            metrics["target_revenue_million"] = round(max(40.0, float(real_rev) * 0.85), 1)
             metrics["revenue_source"] = "original_capex"
         show_id = _stable_id("nls", f"{channel}:{title}")
         shows.append(
@@ -182,8 +198,8 @@ def get_original_variety_shows() -> list[dict]:
         metrics = _metrics_from_rating(rating if has_actual else 0)
         rev = item.get("revenue_million")
         if rev is not None:
-            metrics["revenue_million"] = round(float(rev), 2)
-            metrics["target_revenue_million"] = max(40, int(float(rev) * 0.85))
+            metrics["revenue_million"] = round(float(rev), 1)
+            metrics["target_revenue_million"] = round(max(40.0, float(rev) * 0.85), 1)
             metrics["revenue_source"] = "original_capex"
         else:
             metrics["revenue_million"] = 0
@@ -236,8 +252,8 @@ def get_original_drama_shows() -> list[dict]:
         metrics = _metrics_from_rating(rating)
         rev = item.get("revenue_million")
         if rev is not None:
-            metrics["revenue_million"] = round(float(rev), 2)
-            metrics["target_revenue_million"] = max(40, int(float(rev) * 0.85))
+            metrics["revenue_million"] = round(float(rev), 1)
+            metrics["target_revenue_million"] = round(max(40.0, float(rev) * 0.85), 1)
             metrics["revenue_source"] = "original_capex"
         title = str(item["program_name"])
         ep = item.get("episodes")
@@ -297,7 +313,7 @@ def _apply_admin_target_ratings(shows: list[dict]) -> list[dict]:
         if matched.get("target_buzz") is not None:
             show["target_buzz"] = int(round(float(matched["target_buzz"])))
         if matched.get("target_revenue_million") is not None:
-            show["target_revenue_million"] = round(float(matched["target_revenue_million"]), 2)
+            show["target_revenue_million"] = round(float(matched["target_revenue_million"]), 1)
     return shows
 
 
@@ -416,59 +432,169 @@ def get_ena_variety_df() -> pd.DataFrame:
     return pd.DataFrame(catalog)
 
 
-def get_competition_data(slot: str) -> pd.DataFrame:
-    rows: list[dict] = []
-    hhmm = _parse_slot_hhmm(slot)
-    report_date = _latest_report_date()
-    if hhmm and report_date:
-        try:
-            comp = _nielsen_competition_df(report_date)
-        except Exception:  # noqa: BLE001
-            comp = pd.DataFrame()
+def _start_to_minutes(start_time: Any) -> int | None:
+    hhmm = _start_to_hhmm(start_time)
+    if not hhmm:
+        return None
+    h, m = hhmm.split(":")
+    return int(h) * 60 + int(m)
 
-        if not comp.empty:
-            matched = comp[comp["start_time"].astype(str).str.startswith(hhmm)]
-            if matched.empty:
-                hour = hhmm[:2]
-                hour_rows = comp[comp["start_time"].astype(str).str.startswith(f"{hour}:")]
-                if not hour_rows.empty:
-                    ena_best = (
-                        hour_rows[hour_rows["channel_name"].isin(ENA_CHANNELS)]
-                        .sort_values("rating", ascending=False)
-                        .head(1)
-                    )
-                    if not ena_best.empty:
-                        start = ena_best.iloc[0]["start_time"]
-                        matched = comp[comp["start_time"] == start]
-                    else:
-                        matched = (
-                            hour_rows.sort_values("rating", ascending=False)
-                            .groupby("channel_name", as_index=False)
-                            .first()
-                        )
 
-            for _, r in matched.iterrows():
-                ch = str(r["channel_name"])
-                title = str(r.get("program_name") or "-")
-                rows.append(
-                    {
-                        "channel": ch,
-                        "title": title,
-                        "is_ena": ch in ENA_CHANNELS,
-                        "rating": round(float(r["rating"] or 0), 3),
-                        "data_source": "nielsen",
-                    }
-                )
+def _titles_match(a: str, b: str) -> bool:
+    def _norm(s: str) -> str:
+        t = re.sub(r"<[^>]+>", "", str(s or ""))
+        t = re.sub(r"\s+", "", t).lower()
+        # 한글/영문 표기 통일 (나는 솔로 ↔ 나는SOLO)
+        t = t.replace("solo", "솔로")
+        return t
 
-    if not rows:
-        return pd.DataFrame(columns=["channel", "title", "is_ena", "rating", "data_source"])
+    x, y = _norm(a), _norm(b)
+    if not x or not y:
+        return False
+    return x == y or x in y or y in x
 
-    df = pd.DataFrame(rows)
+
+def _window_rows(comp: pd.DataFrame, center_min: int, window_minutes: int = 30) -> pd.DataFrame:
+    mins = comp["start_time"].map(_start_to_minutes)
+    mask = mins.notna() & ((mins - center_min).abs() <= window_minutes)
+    return comp.loc[mask].copy()
+
+
+def _best_per_channel(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
     return (
         df.sort_values("rating", ascending=False)
-        .drop_duplicates(subset=["channel", "title"], keep="first")
+        .drop_duplicates(subset=["channel_name"], keep="first")
         .reset_index(drop=True)
     )
+
+
+def get_competition_program_options(slot: str) -> pd.DataFrame:
+    """동시간대에서 선택 가능한 기준 콘텐츠(ENA 우선) 목록."""
+    empty = pd.DataFrame(columns=["channel", "title", "rating", "start_time"])
+    hhmm = _parse_slot_hhmm(slot)
+    report_date = _latest_report_date()
+    if not hhmm or not report_date:
+        return empty
+    try:
+        comp = _nielsen_competition_df(report_date)
+    except Exception:  # noqa: BLE001
+        return empty
+    if comp.empty:
+        return empty
+
+    center = _start_to_minutes(hhmm)
+    if center is None:
+        return empty
+    window = _window_rows(comp, center, 30)
+    if window.empty:
+        hour = hhmm[:2]
+        window = comp[comp["start_time"].astype(str).str.startswith(f"{hour}:")].copy()
+    if window.empty:
+        return empty
+
+    ena = window[window["channel_name"].isin(ENA_CHANNELS)].copy()
+    pool = ena if not ena.empty else window[window["channel_name"].isin(MAJOR_CHANNELS)].copy()
+    if pool.empty:
+        pool = window
+    best = _best_per_channel(pool).sort_values("rating", ascending=False)
+    rows = [
+        {
+            "channel": str(r.channel_name),
+            "title": str(r.program_name or "-"),
+            "rating": round(float(r.rating or 0), 3),
+            "start_time": str(r.start_time) if r.start_time else None,
+        }
+        for r in best.itertuples()
+    ]
+    return pd.DataFrame(rows)
+
+
+def get_competition_data(slot: str, selected_title: str | None = None) -> pd.DataFrame:
+    """선택된 기준 콘텐츠(좌측) + 주요채널 동시간대 상위 7개 경쟁 콘텐츠."""
+    cols = ["channel", "title", "is_ena", "is_selected", "rating", "data_source"]
+    hhmm = _parse_slot_hhmm(slot)
+    report_date = _latest_report_date()
+    if not hhmm or not report_date:
+        return pd.DataFrame(columns=cols)
+
+    try:
+        comp = _nielsen_competition_df(report_date)
+    except Exception:  # noqa: BLE001
+        return pd.DataFrame(columns=cols)
+    if comp.empty:
+        return pd.DataFrame(columns=cols)
+
+    center = _start_to_minutes(hhmm)
+    if center is None:
+        return pd.DataFrame(columns=cols)
+
+    window = _window_rows(comp, center, 30)
+    if window.empty:
+        hour = hhmm[:2]
+        window = comp[comp["start_time"].astype(str).str.startswith(f"{hour}:")].copy()
+    if window.empty:
+        return pd.DataFrame(columns=cols)
+
+    baseline_row = None
+    if selected_title:
+        title_hits = window[
+            window["program_name"].astype(str).map(lambda t: _titles_match(t, selected_title))
+        ]
+        if not title_hits.empty:
+            ena_hits = title_hits[title_hits["channel_name"].isin(ENA_CHANNELS)]
+            baseline_row = (ena_hits if not ena_hits.empty else title_hits).sort_values(
+                "rating", ascending=False
+            ).iloc[0]
+
+    if baseline_row is None:
+        ena_pool = window[window["channel_name"].isin(ENA_CHANNELS)]
+        if not ena_pool.empty:
+            baseline_row = ena_pool.sort_values("rating", ascending=False).iloc[0]
+        else:
+            major_pool = window[window["channel_name"].isin(MAJOR_CHANNELS)]
+            pool = major_pool if not major_pool.empty else window
+            baseline_row = pool.sort_values("rating", ascending=False).iloc[0]
+
+    base_min = _start_to_minutes(baseline_row["start_time"]) or center
+    rival_window = _window_rows(comp, base_min, 30)
+    if rival_window.empty:
+        rival_window = window
+
+    majors = rival_window[rival_window["channel_name"].isin(MAJOR_CHANNELS)].copy()
+    if majors.empty:
+        majors = rival_window.copy()
+
+    base_ch = str(baseline_row["channel_name"])
+    base_title = str(baseline_row.get("program_name") or "-")
+    rivals = majors[
+        ~(
+            (majors["channel_name"].astype(str) == base_ch)
+            & majors["program_name"].astype(str).map(lambda t: _titles_match(t, base_title))
+        )
+    ]
+    rivals_best = _best_per_channel(rivals).sort_values("rating", ascending=False).head(7)
+
+    def _row(r: Any, *, selected: bool) -> dict:
+        ch = str(r["channel_name"] if isinstance(r, pd.Series) else r.channel_name)
+        title = str(
+            (r.get("program_name") if isinstance(r, pd.Series) else r.program_name) or "-"
+        )
+        rating = float(r["rating"] if isinstance(r, pd.Series) else r.rating or 0)
+        return {
+            "channel": ch,
+            "title": title,
+            "is_ena": ch in ENA_CHANNELS,
+            "is_selected": selected,
+            "rating": round(rating, 3),
+            "data_source": "nielsen",
+        }
+
+    rows = [_row(baseline_row, selected=True)]
+    for r in rivals_best.itertuples():
+        rows.append(_row(r, selected=False))
+    return pd.DataFrame(rows, columns=cols)
 
 
 def get_top_bottom_groups() -> tuple[list[dict], list[dict]]:
@@ -501,7 +627,7 @@ def get_weekly_summary() -> dict:
         "top_rating": round(float(top_show["rating"]), 3),
         "rising_count": int(len(rising)),
         "avg_rating": round(float(df["rating"].mean()), 3),
-        "total_revenue": float(df["revenue_million"].sum()),
+        "total_revenue": round(float(df["revenue_million"].sum()), 1),
         "nielsen_count": nielsen_count,
         "report_date": _latest_report_date(),
     }
@@ -511,10 +637,10 @@ def get_goal_vs_actual_df() -> pd.DataFrame:
     df = get_ena_variety_df().copy()
     if df.empty:
         return df
-    df["rating_achv"] = (df["rating"] / df["target_rating"] * 100).round(1)
-    df["buzz_achv"] = (df["buzz_index"] / df["target_buzz"] * 100).round(1)
-    df["revenue_achv"] = (df["revenue_million"] / df["target_revenue_million"] * 100).round(1)
-    df["overall_achv"] = ((df["rating_achv"] + df["buzz_achv"] + df["revenue_achv"]) / 3).round(1)
+    df["rating_achv"] = (df["rating"] / df["target_rating"] * 100).round(0)
+    df["buzz_achv"] = (df["buzz_index"] / df["target_buzz"] * 100).round(0)
+    df["revenue_achv"] = (df["revenue_million"] / df["target_revenue_million"] * 100).round(0)
+    df["overall_achv"] = ((df["rating_achv"] + df["buzz_achv"] + df["revenue_achv"]) / 3).round(0)
     df["goal_status"] = df["overall_achv"].apply(
         lambda x: "목표 달성" if x >= 100 else ("근접" if x >= 85 else "미달")
     )
@@ -537,40 +663,132 @@ def get_goal_summary() -> dict:
         }
     achieved = df[df["goal_status"] == "목표 달성"]
     return {
-        "avg_achv": round(float(df["overall_achv"].mean()), 1),
+        "avg_achv": int(round(float(df["overall_achv"].mean()))),
         "achieved_count": int(len(achieved)),
         "total_count": int(len(df)),
-        "avg_rating_achv": round(float(df["rating_achv"].mean()), 1),
-        "avg_revenue_achv": round(float(df["revenue_achv"].mean()), 1),
+        "avg_rating_achv": int(round(float(df["rating_achv"].mean()))),
+        "avg_revenue_achv": int(round(float(df["revenue_achv"].mean()))),
         "top_title": df.iloc[0]["title"],
-        "top_achv": float(df.iloc[0]["overall_achv"]),
+        "top_achv": int(round(float(df.iloc[0]["overall_achv"]))),
         "bottom_title": df.iloc[-1]["title"],
-        "bottom_achv": float(df.iloc[-1]["overall_achv"]),
+        "bottom_achv": int(round(float(df.iloc[-1]["overall_achv"]))),
     }
 
 
+def _program_daily_ratings(title: str) -> pd.DataFrame:
+    """Supabase(로컬) 닐슨 경쟁표에서 프로그램별 일자 시청률(일별 최고)."""
+    empty = pd.DataFrame(columns=["report_date", "rating"])
+    try:
+        raw = nd.get_all_competition_ratings()
+    except Exception:  # noqa: BLE001
+        return empty
+    if raw.empty:
+        return empty
+
+    mask = (
+        raw["sheet_name"].isin(VARIETY_SHEETS)
+        & (raw["target"] == PREFERRED_TARGET)
+        & (~raw["is_daily_total"].fillna(False))
+    )
+    comp = raw.loc[mask].copy()
+    if comp.empty:
+        return empty
+
+    hits = comp[comp["program_name"].astype(str).map(lambda t: _titles_match(t, title))]
+    if hits.empty:
+        return empty
+
+    ena = hits[hits["channel_name"].isin(ENA_CHANNELS)]
+    pool = ena if not ena.empty else hits
+    daily = (
+        pool.groupby("report_date", as_index=False)["rating"]
+        .max()
+        .sort_values("report_date")
+        .reset_index(drop=True)
+    )
+    daily["rating"] = daily["rating"].map(lambda v: round(float(v or 0), 3))
+    return daily
+
+
 def get_trend_data(show_id: str, period: str = "week") -> pd.DataFrame:
+    """콘텐츠별 주/월/연 시청률 트렌드 (닐슨 리포트일 실데이터 집계)."""
+    cols = ["period", "rating", "title", "avg_rating", "period_type", "report_dates"]
     catalog = {s["id"]: s for s in get_variety_catalog()}
     show = catalog.get(show_id)
     if not show:
-        return pd.DataFrame(columns=["period", "rating", "title"])
+        return pd.DataFrame(columns=cols)
 
-    history = show.get("rating_history") or [show.get("rating", 0)]
-    title = show["title"]
+    title = str(show["title"])
+    daily = _program_daily_ratings(title)
+    if daily.empty:
+        # 카탈로그에만 있는 콘텐츠: 단일 실적 포인트
+        rating = round(float(show.get("rating") or 0), 3)
+        label = {"week": "현재", "month": "현재", "year": "현재"}.get(period, "현재")
+        return pd.DataFrame(
+            [
+                {
+                    "period": label,
+                    "rating": rating,
+                    "title": title,
+                    "avg_rating": rating,
+                    "period_type": period,
+                    "report_dates": 1,
+                }
+            ]
+        )
+
+    frame = daily.copy()
+    frame["dt"] = pd.to_datetime(frame["report_date"], errors="coerce")
+    frame = frame.dropna(subset=["dt"])
+    if frame.empty:
+        return pd.DataFrame(columns=cols)
+
+    overall_avg = round(float(frame["rating"].mean()), 3)
 
     if period == "week":
-        labels = [f"{i + 1}주" for i in range(len(history))]
-        values = list(history)
+        # 업로드된 닐슨 리포트일 = 주차 포인트 (시간순 1주, 2주, …)
+        ordered = frame.sort_values("dt").reset_index(drop=True)
+        labels = [
+            f"{i + 1}주({d.strftime('%m/%d')})"
+            for i, d in enumerate(ordered["dt"].tolist())
+        ]
+        values = [round(float(v), 3) for v in ordered["rating"].tolist()]
+        counts = [1] * len(ordered)
     elif period == "month":
-        labels = ["1월", "2월", "3월", "4월", "5월", "6월"]
-        base = float(np.mean(history))
-        values = [round(base * f, 3) for f in (0.85, 0.9, 0.95, 1.0, 1.02, 1.0)]
+        frame["bucket"] = frame["dt"].dt.strftime("%Y-%m")
+        frame["label"] = frame["dt"].dt.month.astype(int).astype(str) + "월"
+        grouped = (
+            frame.groupby(["bucket", "label"], as_index=False)
+            .agg(rating=("rating", "mean"), report_dates=("report_date", "nunique"))
+            .sort_values("bucket")
+        )
+        grouped["rating"] = grouped["rating"].map(lambda v: round(float(v), 3))
+        labels = grouped["label"].tolist()
+        values = grouped["rating"].tolist()
+        counts = grouped["report_dates"].tolist()
     else:
-        labels = ["2023", "2024", "2025", "2026"]
-        base = float(np.mean(history))
-        values = [round(base * f, 3) for f in (0.7, 0.85, 0.95, 1.0)]
+        frame["bucket"] = frame["dt"].dt.strftime("%Y")
+        frame["label"] = frame["dt"].dt.year.astype(int).astype(str) + "년"
+        grouped = (
+            frame.groupby(["bucket", "label"], as_index=False)
+            .agg(rating=("rating", "mean"), report_dates=("report_date", "nunique"))
+            .sort_values("bucket")
+        )
+        grouped["rating"] = grouped["rating"].map(lambda v: round(float(v), 3))
+        labels = grouped["label"].tolist()
+        values = grouped["rating"].tolist()
+        counts = grouped["report_dates"].tolist()
 
-    return pd.DataFrame({"period": labels, "rating": values, "title": title})
+    return pd.DataFrame(
+        {
+            "period": labels,
+            "rating": values,
+            "title": title,
+            "avg_rating": overall_avg,
+            "period_type": period,
+            "report_dates": counts,
+        }
+    )
 
 
 def nielsen_slot_options() -> list[str]:
@@ -605,20 +823,20 @@ def analyze_new_proposal(title: str, genre: str, slot: str, cast: str) -> dict:
         competition_records = slot_competition.to_dict("records")
 
     nielsen_rows = [r for r in competition_records if r.get("data_source") == "nielsen"]
-    competition_score = max(1, min(10, round(10 - avg_comp_rating * 1.5, 1)))
+    competition_score = max(1, min(10, int(round(10 - avg_comp_rating * 1.5))))
     if nielsen_rows:
         avg_n = float(np.mean([r["rating"] for r in nielsen_rows]))
-        competition_score = max(1, min(10, round(10 - avg_n * 8, 1)))
+        competition_score = max(1, min(10, int(round(10 - avg_n * 8))))
 
     live = get_variety_catalog()
     similar = [s for s in live if genre.split()[0] in s.get("genre", "")]
-    format_score = 6.0
+    format_score = 6
     if similar:
         avg_sim = float(np.mean([s.get("avg_rating", s.get("rating", 0.2)) for s in similar]))
-        format_score = min(10, round(avg_sim * 3 if avg_sim >= 1 else avg_sim * 12, 1))
+        format_score = min(10, int(round(avg_sim * 3 if avg_sim >= 1 else avg_sim * 12)))
 
     scores, score_details = engine._build_score_details(cast_score, competition_score, format_score)
-    overall = round(float(np.mean(list(scores.values()))), 1)
+    overall = int(round(float(np.mean(list(scores.values())))))
     logline = engine._build_logline(title, genre, cast_list)
     swot = engine._build_swot_analysis(
         title, genre, slot, cast_list, scores, overall, competition_records, logline
