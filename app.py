@@ -1,11 +1,13 @@
 """
 ENA 가치+ — 콘텐츠제작센터 성과 관리 · 콘텐츠 가치 확장 분석 대시보드
-실행: streamlit run app.py
+
+로컬 실행: streamlit run app.py
+Streamlit Cloud: Main file path = app.py (branch main)
 """
 
 import streamlit as st
 
-from utils import config  # noqa: F401  — .env 로드
+from utils import config  # noqa: F401  — .env / st.secrets 로드
 from utils.components import navigate_to, render_sidebar_header, render_sidebar_nav
 from utils.theme import GLOBAL_CSS
 from data import local_db
@@ -32,7 +34,8 @@ local_db.init_schema()  # SQL Editor 없이 로컬 스키마 자동 준비
 try:
     from data.supabase_upload import sync_admin_metrics_from_supabase
 
-    sync_admin_metrics_from_supabase()  # 목표·화제성 지표 Supabase → 로컬
+    # 목표·화제성·제외 타이틀 Supabase → 로컬 (Cloud 재시작 시 초기화 방지)
+    sync_admin_metrics_from_supabase()
 except Exception:  # noqa: BLE001
     pass
 
@@ -87,7 +90,7 @@ with st.sidebar:
         type="primary" if current == "admin" else "secondary",
     ):
         navigate_to("admin")
-    st.caption("ENA 가치+ · v0.9")
+    st.caption("ENA 가치+ · v1.0")
     st.caption("작성: 콘텐츠제작센터")
 
 # ── 페이지 렌더 ────────────────────────────────────────────────────────────────
