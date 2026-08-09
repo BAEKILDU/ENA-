@@ -9,6 +9,8 @@ from typing import Any
 
 import pandas as pd
 
+from utils.excel_io import excel_file, read_excel
+
 PROCESSED = Path(__file__).resolve().parent / "processed"
 SKIP_EXACT = {
     "계",
@@ -128,7 +130,7 @@ def detect_workbook_kind(path: Path, original_name: str | None = None) -> str:
     if "닐슨" in name or "nielsen" in name or "채널시청률" in name:
         return "nielsen"
     try:
-        sheets = set(pd.ExcelFile(path).sheet_names)
+        sheets = set(excel_file(path).sheet_names)
     except Exception:  # noqa: BLE001
         return "revenue_simple"
     if "● summary" in sheets or any("오리지널" in s for s in sheets) or any("CAPEX" in s for s in sheets):
@@ -140,7 +142,7 @@ def detect_workbook_kind(path: Path, original_name: str | None = None) -> str:
 
 def extract_report_date(path: Path) -> str:
     try:
-        raw = pd.read_excel(path, sheet_name="● summary", header=None)
+        raw = read_excel(path, sheet_name="● summary", header=None)
         for r in range(min(6, len(raw))):
             for v in raw.iloc[r].tolist():
                 d = _date_iso(v)
@@ -155,7 +157,7 @@ def extract_report_date(path: Path) -> str:
 
 
 def _extract_summary(path: Path, report_date: str) -> list[dict]:
-    raw = pd.read_excel(path, sheet_name="● summary", header=None)
+    raw = read_excel(path, sheet_name="● summary", header=None)
     rows: list[dict] = []
     category: str | None = None
     for r in range(len(raw)):
@@ -193,9 +195,9 @@ def _extract_summary(path: Path, report_date: str) -> list[dict]:
 
 def _extract_drama_compare(path: Path, report_date: str) -> list[dict]:
     sheet = "◎ '26년 오리지널 드라마 타이틀 별 비교"
-    if sheet not in pd.ExcelFile(path).sheet_names:
+    if sheet not in excel_file(path).sheet_names:
         return []
-    raw = pd.read_excel(path, sheet_name=sheet, header=None)
+    raw = read_excel(path, sheet_name=sheet, header=None)
     rows: list[dict] = []
     for r in range(len(raw)):
         vals = raw.iloc[r].tolist()
@@ -232,9 +234,9 @@ def _extract_drama_compare(path: Path, report_date: str) -> list[dict]:
 
 def _extract_variety_compare(path: Path, report_date: str) -> list[dict]:
     sheet = "◎ '26년 오리지널 예능 타이틀 별 비교"
-    if sheet not in pd.ExcelFile(path).sheet_names:
+    if sheet not in excel_file(path).sheet_names:
         return []
-    raw = pd.read_excel(path, sheet_name=sheet, header=None)
+    raw = read_excel(path, sheet_name=sheet, header=None)
     rows: list[dict] = []
     for r in range(len(raw)):
         vals = raw.iloc[r].tolist()
@@ -269,9 +271,9 @@ def _extract_variety_compare(path: Path, report_date: str) -> list[dict]:
 
 def _extract_variety_slots(path: Path) -> dict[str, dict]:
     sheet = "◎ '26년 오리지널 예능"
-    if sheet not in pd.ExcelFile(path).sheet_names:
+    if sheet not in excel_file(path).sheet_names:
         return {}
-    raw = pd.read_excel(path, sheet_name=sheet, header=None)
+    raw = read_excel(path, sheet_name=sheet, header=None)
     out: dict[str, dict] = {}
     for r in range(len(raw)):
         vals = raw.iloc[r].tolist()
@@ -294,9 +296,9 @@ def _extract_variety_slots(path: Path) -> dict[str, dict]:
 
 def _extract_capex_monthly(path: Path, report_date: str) -> pd.DataFrame:
     sheet = "◎ '26년 월별 CAPEX 집행 현황"
-    if sheet not in pd.ExcelFile(path).sheet_names:
+    if sheet not in excel_file(path).sheet_names:
         return pd.DataFrame()
-    raw = pd.read_excel(path, sheet_name=sheet, header=None)
+    raw = read_excel(path, sheet_name=sheet, header=None)
     rows: list[dict] = []
     category = "예능"
     for r in range(len(raw)):
@@ -331,9 +333,9 @@ def _extract_capex_monthly(path: Path, report_date: str) -> pd.DataFrame:
 
 def _extract_targets(path: Path, report_date: str) -> pd.DataFrame:
     sheet = "25년 예능 목표 시청률"
-    if sheet not in pd.ExcelFile(path).sheet_names:
+    if sheet not in excel_file(path).sheet_names:
         return pd.DataFrame()
-    raw = pd.read_excel(path, sheet_name=sheet, header=None)
+    raw = read_excel(path, sheet_name=sheet, header=None)
     rows: list[dict] = []
     for r in range(len(raw)):
         vals = raw.iloc[r].tolist()
@@ -366,9 +368,9 @@ def _extract_targets(path: Path, report_date: str) -> pd.DataFrame:
 
 def _extract_drama_episodes(path: Path, report_date: str) -> pd.DataFrame:
     sheet = "◎ '26년 오리지널 드라마"
-    if sheet not in pd.ExcelFile(path).sheet_names:
+    if sheet not in excel_file(path).sheet_names:
         return pd.DataFrame()
-    raw = pd.read_excel(path, sheet_name=sheet, header=None)
+    raw = read_excel(path, sheet_name=sheet, header=None)
     rows: list[dict] = []
     current_title: str | None = None
     dates_row: list[Any] = []

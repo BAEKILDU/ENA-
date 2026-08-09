@@ -33,7 +33,15 @@ def _reset_widget_keys_on_change(watch_key: str, current: str, widget_keys: list
 
 def _save_upload(uploaded, suffix: str) -> Path:
     raw = uploaded.getvalue()
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    ext = (suffix or "").lower()
+    if ext not in {".xls", ".xlsx", ".xlsm"}:
+        if raw.startswith(b"PK"):
+            ext = ".xlsx"
+        elif raw[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
+            ext = ".xls"
+        else:
+            ext = ".xlsx"
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
     tmp.write(raw)
     tmp.close()
     return Path(tmp.name)

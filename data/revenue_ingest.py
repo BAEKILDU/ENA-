@@ -11,6 +11,7 @@ from typing import Any
 import pandas as pd
 
 from data.supabase_upload import upload_table
+from utils.excel_io import excel_file, read_excel
 
 # 헤더 별칭 → 표준 컬럼
 COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
@@ -180,10 +181,10 @@ def _find_sheet_report_date(raw: pd.DataFrame, header_row: int) -> str | None:
 
 def _read_revenue_frame(path: Path) -> tuple[pd.DataFrame, dict[str, str], str | None]:
     """제목/공백 행을 건너뛰고 헤더 행을 자동 탐지. report_date 힌트 포함."""
-    xl = pd.ExcelFile(path)
+    xl = excel_file(path)
     try:
         first_sheet = xl.sheet_names[0]
-        df0 = pd.read_excel(path, sheet_name=first_sheet)
+        df0 = read_excel(path, sheet_name=first_sheet)
         mapping0 = _map_columns(list(df0.columns), sheet_name=first_sheet)
         if mapping0:
             return df0, mapping0, None
@@ -191,7 +192,7 @@ def _read_revenue_frame(path: Path) -> tuple[pd.DataFrame, dict[str, str], str |
         best: tuple[int, int, dict[str, int], pd.DataFrame, str] | None = None
 
         for sheet in xl.sheet_names:
-            raw = pd.read_excel(path, sheet_name=sheet, header=None)
+            raw = read_excel(path, sheet_name=sheet, header=None)
             if raw.empty:
                 continue
             scan_limit = min(len(raw), 60)
@@ -206,7 +207,7 @@ def _read_revenue_frame(path: Path) -> tuple[pd.DataFrame, dict[str, str], str |
         xl.close()
 
     if best is None:
-        raw = pd.read_excel(path, sheet_name=0, header=None)
+        raw = read_excel(path, sheet_name=0, header=None)
         preview = []
         for r in range(min(12, len(raw))):
             cells = [str(v).replace("\n", " ") for v in raw.iloc[r].tolist()[:8] if pd.notna(v)]

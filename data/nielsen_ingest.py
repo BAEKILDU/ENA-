@@ -10,6 +10,7 @@ from typing import Any
 import pandas as pd
 
 from data.supabase_upload import upload_table
+from utils.excel_io import excel_file, read_excel
 
 RANKING_SHEETS = {"유료방송가입가구", "개인"}
 COMPETITION_SUFFIX = "경쟁채널시청률"
@@ -359,7 +360,7 @@ def parse_workbook(
     *,
     original_name: str | None = None,
 ) -> tuple[str, dict[str, list[dict]]]:
-    xl = pd.ExcelFile(path)
+    xl = excel_file(path)
     source_file = original_name or path.name
     report_date: date | None = None
     date_error: Exception | None = None
@@ -370,7 +371,7 @@ def parse_workbook(
 
     try:
         for sheet_name in xl.sheet_names:
-            df = pd.read_excel(path, sheet_name=sheet_name, header=None)
+            df = read_excel(path, sheet_name=sheet_name, header=None)
             if report_date is None:
                 try:
                     report_date = _parse_report_date(df, source_file)
