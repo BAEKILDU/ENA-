@@ -3,10 +3,20 @@
 from __future__ import annotations
 
 from io import BytesIO
+from pathlib import Path
 
 from docx import Document
 
 from data.analysis_engine import get_revenue_ideas
+
+_BLANK_DOCX = Path(__file__).resolve().parent / "templates" / "blank.docx"
+
+
+def _new_document() -> Document:
+    """설치본 default.docx 손상 시에도 동작하도록 번들 템플릿 사용."""
+    if _BLANK_DOCX.exists():
+        return Document(str(_BLANK_DOCX))
+    return Document()
 
 
 def build_analysis_docx(result: dict) -> bytes:
@@ -29,7 +39,7 @@ def build_analysis_docx(result: dict) -> bytes:
     source_file = result.get("source_file", "")
     source_info = f"{source_label} · {source_file}" if source_file else source_label
 
-    doc = Document()
+    doc = _new_document()
     doc.add_heading("ENA 가치+ 경쟁력 분석 결과", level=0)
     doc.add_paragraph("신규 콘텐츠 가치+ · 분석 상세 리포트")
     doc.add_paragraph(f"출처: {source_info}")
