@@ -6,6 +6,7 @@ import re
 import streamlit as st
 
 from data.analysis_engine import get_revenue_ideas
+from data.hybrid_data import analyze_new_proposal, nielsen_slot_options
 from utils.charts import bar_chart, horizontal_bar_chart
 from utils.components import (
     navigate_to,
@@ -17,6 +18,199 @@ from utils.components import (
 )
 from utils.export_docx import build_analysis_docx
 from utils.format import format_rating
+from utils.proposal_parse import FIELD_LABELS
+
+_GENRES = ["푸드 예능", "서바이벌 예능", "퀴즈 예능", "리얼리티 예능", "코미디 예능", "드라마", "예능"]
+_EDITABLE_KEYS = ("title", "genre", "channel", "slot", "cast", "logline")
+
+
+def _overview_value(result: dict, key: str):
+    overview = result.get("overview") or {}
+    if key == "cast":
+        cast = overview.get("cast") or result.get("cast") or []
+        if isinstance(cast, list):
+            return ", ".join(str(c) for c in cast if c)
+        return str(cast or "")
+    return overview.get(key) or result.get(key) or ""
+
+
+def _is_missing_value(key: str, value) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, list):
+        cleaned = [str(v).strip() for v in value if str(v).strip()]
+        return (not cleaned) or cleaned == ["미정"]
+    text = str(value).strip()
+    return (not text) or text == "미정"
+
+
+def _incomplete_keys(result: dict) -> list[str]:
+    missing_labels = set((result.get("extraction") or {}).get("missing_fields") or [])
+    label_to_key = {v: k for k, v in FIELD_LABELS.items()}
+    keys: list[str] = []
+    for label in missing_labels:
+        key = label_to_key.get(label)
+        if key and key not in keys:
+            keys.append(key)
+    for key in _EDITABLE_KEYS:
+        if key in keys:
+            continue
+        if _is_missing_value(key, _overview_value(result, key)):
+            keys.append(key)
+    return keys
+
+
+def _apply_overrides(result: dict, overrides: dict) -> dict:
+    title = str(overrides.get("title") or _overview_value(result, "title") or "미정").strip() or "미정"
+    genre = str(overrides.get("genre") or _overview_value(result, "genre") or "리얼리티 예능").strip()
+    if genre == "미정":
+        genre = "리얼리티 예능"
+    slot = str(overrides.get("slot") or _overview_value(result, "slot") or "수 22:00").strip()
+    if slot == "미정":
+        slot = "수 22:00"
+    cast = str(overrides.get("cast") or _overview_value(result, "cast") or "미정").strip() or "미정"
+    channel = str(overrides.get("channel") or _overview_value(result, "channel") or "ENA").strip() or "ENA"
+    logline = str(overrides.get("logline") or _overview_value(result, "logline") or "미정").strip() or "미정"
+
+    refreshed = analyze_new_proposal(title, genre, slot, cast)
+    refreshed["source"] = result.get("source") or "upload"
+    refreshed["source_file"] = result.get("source_file") or ""
+    extraction = dict(result.get("extraction") or {})
+    overview = refreshed.get("overview") or {}
+    overview["title"] = title
+    overview["genre"] = genre
+    overview["slot"] = slot
+    overview["channel"] = channel
+    overview["cast"] = [c.strip() for c in cast.split(",") if c.strip()] or ["미정"]
+    overview["logline"] = logline
+    refreshed["overview"] = overview
+    refreshed["title"] = title
+    refreshed["genre"] = genre
+    refreshed["slot"] = slot
+    refreshed["cast"] = overview["cast"]
+
+    still_missing = []
+    for key in _EDITABLE_KEYS:
+        label = FIELD_LABELS.get(key, key)
+        if _is_missing_value(key, overview.get(key) if key != "cast" else overview.get("cast")):
+            still_missing.append(label)
+    extraction["missing_fields"] = still_missing
+    refreshed["extraction"] = extraction
+
+    if result.get("summary", {}).get("intent"):
+        refreshed.setdefault("summary", {})
+        refreshed["summary"]["intent"] = result["summary"]["intent"]
+        if refreshed.get("swot") is not None:
+            refreshed["swot"]["intent_summary"] = result["summary"]["intent"]
+    return refreshed
+
+
+def _render_override_actions(result: dict) -> None:
+    """문서에서 확인되지 않은 항목 직접 입력 · 편성일정 수정 액션."""
+    render_section_title("입력 보완 · 편성 수정")
+    incomplete = _incomplete_keys(result)
+    if incomplete:
+        st.caption(
+            "문서에서 확인되지 않은 항목: "
+            + ", ".join(FIELD_LABELS.get(k, k) for k in incomplete)
+        )
+    else:
+        st.caption("필수 항목은 확인되었습니다. 필요 시 값을 보완하거나 편성일정을 수정하세요.")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button(
+            "미확인 항목 직접 입력",
+            key="btn_fill_missing",
+            use_container_width=True,
+            type="primary" if st.session_state.get("show_fill_missing") else "secondary",
+        ):
+            st.session_state["show_fill_missing"] = not st.session_state.get("show_fill_missing", False)
+            st.session_state["show_edit_slot"] = False
+            st.rerun()
+    with c2:
+        if st.button(
+            "편성일정 수정",
+            key="btn_edit_slot",
+            use_container_width=True,
+            type="primary" if st.session_state.get("show_edit_slot") else "secondary",
+        ):
+            st.session_state["show_edit_slot"] = not st.session_state.get("show_edit_slot", False)
+            st.session_state["show_fill_missing"] = False
+            st.rerun()
+
+    if st.session_state.get("show_fill_missing"):
+        keys = incomplete or list(_EDITABLE_KEYS)
+        with st.container(border=True):
+            st.markdown("**미확인·미정 항목 직접 입력**")
+            overrides: dict = {}
+            for key in keys:
+                label = FIELD_LABELS.get(key, key)
+                current = _overview_value(result, key)
+                current_text = str(current).strip()
+                if key == "genre":
+                    idx = _GENRES.index(current_text) if current_text in _GENRES else 0
+                    overrides[key] = st.selectbox(
+                        label,
+                        options=_GENRES,
+                        index=idx,
+                        key=f"fill_{key}",
+                    )
+                elif key == "slot":
+                    slots = nielsen_slot_options()
+                    options = list(slots)
+                    if current_text and current_text not in options and current_text != "미정":
+                        options = [current_text] + options
+                    default = current_text if current_text in options else (options[0] if options else "수 22:00")
+                    overrides[key] = st.selectbox(
+                        label,
+                        options=options or ["수 22:00"],
+                        index=(options or ["수 22:00"]).index(default),
+                        key=f"fill_{key}",
+                    )
+                else:
+                    placeholder = "쉼표로 구분해 입력" if key == "cast" else f"{label} 입력"
+                    overrides[key] = st.text_input(
+                        label,
+                        value="" if current_text == "미정" else current_text,
+                        placeholder=placeholder,
+                        key=f"fill_{key}",
+                    )
+            if st.button("입력 반영 · 재분석", type="primary", key="apply_fill_missing"):
+                st.session_state["analysis_result"] = _apply_overrides(result, overrides)
+                st.session_state["show_fill_missing"] = False
+                st.success("입력 내용을 반영해 재분석했습니다.")
+                st.rerun()
+
+    if st.session_state.get("show_edit_slot"):
+        with st.container(border=True):
+            st.markdown("**편성일정 수정**")
+            slots = nielsen_slot_options()
+            current_slot = str(_overview_value(result, "slot") or "").strip() or "수 22:00"
+            options = list(slots)
+            if current_slot not in options:
+                options = [current_slot] + options
+            new_slot = st.selectbox(
+                "편성 시간대",
+                options=options or ["수 22:00"],
+                index=(options or ["수 22:00"]).index(current_slot)
+                if current_slot in (options or ["수 22:00"])
+                else 0,
+                key="edit_slot_select",
+                help="닐슨 실데이터 기반 시간대가 포함됩니다.",
+            )
+            custom_slot = st.text_input(
+                "직접 입력 (선택)",
+                value="",
+                placeholder="예: 목 22:30",
+                key="edit_slot_custom",
+            )
+            if st.button("편성일정 반영 · 재분석", type="primary", key="apply_edit_slot"):
+                slot_value = (custom_slot or "").strip() or new_slot
+                st.session_state["analysis_result"] = _apply_overrides(result, {"slot": slot_value})
+                st.session_state["show_edit_slot"] = False
+                st.success(f"편성일정을 '{slot_value}'(으)로 반영해 재분석했습니다.")
+                st.rerun()
 
 
 def render() -> None:
@@ -32,6 +226,9 @@ def render() -> None:
 
     # 1~4
     render_analysis_summary(result)
+
+    # 미확인 항목 직접 입력 · 편성일정 수정
+    _render_override_actions(result)
 
     # 5. 주요 데이터 지표
     kpi = result.get("kpi") or {
